@@ -196,16 +196,17 @@ const statusLabel = { pending: 'Belum Dikerjakan', dikerjakan: 'Sedang Dikerjaka
             <div style="padding:8px;border-bottom:1px solid var(--gray-100);">
               <input type="text" class="form-control" placeholder="Cari pengguna..." style="padding:7px 10px;font-size:13px;" oninput="searchDropdownOptions('assign', this.value)">
             </div>
-            <div class="dropdown-group-label">Pengguna Terdaftar</div>
-            <% users.forEach(function(u) { %>
+            <% groupUsersByDir(users, direktorats).forEach(function(g) { %>
+            <div class="dropdown-group-label"><%= g.label %></div>
+            <% g.users.forEach(function(u) { %>
             <label class="dropdown-opt" data-search="<%= u.name.toLowerCase() %> <%= u.email.toLowerCase() %>">
               <input type="checkbox" name="assignedTo" value="<%= u._id %>" onchange="toggleUserTag('assign', this, '<%= u.name %>')">
               <div>
                 <div style="font-size:13.5px;color:var(--gray-800);"><%= u.name %></div>
-                <div style="font-size:11.5px;color:var(--gray-400);"><%= u.email %> &middot; <%= u.organization || '' %></div>
+                <div style="font-size:11.5px;color:var(--gray-400);"><%= u.email %><%= u.jabatan ? ' &middot; ' + u.jabatan : '' %></div>
               </div>
             </label>
-            <% }); %>
+            <% }); }); %>
           </div>
         </div>
         <% } %>

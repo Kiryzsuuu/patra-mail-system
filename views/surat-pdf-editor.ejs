@@ -68,6 +68,12 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
+.doc-footer-banner {
+  position: absolute; bottom: 0; left: 0;
+  width: 100%; height: auto; z-index: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
 
 .doc-type-banner {
   background: #f9fafb; border-bottom: 1px solid #e5e7eb;
@@ -375,6 +381,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
       </div>
       <% }) %>
 
+      <!-- FOOTER RESMI INSPIRA -->
+      <img src="/img/inspira_footer.png" class="doc-footer-banner" alt="">
+
     </div><!-- /a4-page -->
   </div><!-- /canvas-area -->
 
@@ -407,10 +416,14 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         <div style="margin-top:12px;">
           <select class="panel-select" id="coSignSelect">
             <option value="">— Pilih pengguna —</option>
-            <% users.forEach(u => { %>
+            <% groupUsersByDir(users, direktorats).forEach(function(g){ %>
+            <optgroup label="<%= g.label %>">
+            <% g.users.forEach(u => { %>
             <% if (u._id.toString() !== currentUser._id.toString()) { %>
-            <option value="<%= u._id %>"><%= u.name %> (<%= u.email %>)</option>
+            <option value="<%= u._id %>"><%= u.name %><%= u.jabatan ? ' (' + u.jabatan + ')' : '' %></option>
             <% } %>
+            <% }) %>
+            </optgroup>
             <% }) %>
           </select>
           <button class="btn-add-cosign" onclick="addCoSigner()">

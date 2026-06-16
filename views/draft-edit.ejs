@@ -145,16 +145,17 @@
               <div style="padding:8px;border-bottom:1px solid var(--gray-100);">
                 <input type="text" class="form-control" placeholder="Cari..." style="padding:7px 10px;font-size:13px;" oninput="searchDD('tertuju',this.value)">
               </div>
-              <div class="dropdown-group-label">Pengguna Terdaftar</div>
-              <% users.forEach(u => { const isSel = (email.to||[]).some(r => r.userId?.toString()===u._id.toString()); %>
+              <% groupUsersByDir(users, direktorats).forEach(function(g){ %>
+              <div class="dropdown-group-label"><%= g.label %></div>
+              <% g.users.forEach(u => { const isSel = (email.to||[]).some(r => r.userId?.toString()===u._id.toString()); %>
               <label class="dropdown-opt" data-search="<%= u.name.toLowerCase() %> <%= u.email.toLowerCase() %>">
                 <input type="checkbox" name="to" value="<%= u._id %>" data-name="<%= u.name %>" <%= isSel?'checked':'' %> onchange="toggleTag('tertuju',this,this.dataset.name)">
                 <div>
                   <div style="font-size:13.5px;color:var(--gray-800);"><%= u.name %></div>
-                  <div style="font-size:11.5px;color:var(--gray-400);"><%= u.email %></div>
+                  <div style="font-size:11.5px;color:var(--gray-400);"><%= u.email %><%= u.jabatan ? ' · ' + u.jabatan : '' %></div>
                 </div>
               </label>
-              <% }) %>
+              <% }) }) %>
             </div>
           </div>
         </div>

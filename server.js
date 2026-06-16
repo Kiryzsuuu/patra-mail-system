@@ -32,6 +32,7 @@ const ESignSession     = require('./models/ESignSession');
 const PersonalDocument = require('./models/PersonalDocument');
 const QRCode = require('qrcode');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { groupUsersByDir } = require('./lib/userGroups');
 
 const app = express();
 
@@ -133,8 +134,28 @@ app.use(async (req, res, next) => {
   } catch (e) {
     res.locals.siteSettings = {};
   }
+  // Inject daftar direktorat + helper grup karyawan ke semua view (cache 60 dtk)
+  res.locals.groupUsersByDir = groupUsersByDir;
+  if (req.user) {
+    try {
+      res.locals.direktorats = await getDirektoratsCached();
+    } catch (e) {
+      res.locals.direktorats = [];
+    }
+  } else {
+    res.locals.direktorats = [];
+  }
   next();
 });
+
+// Cache ringan untuk daftar direktorat (dipakai semua view)
+let _dirCache = { data: [], ts: 0 };
+async function getDirektoratsCached() {
+  if (Date.now() - _dirCache.ts < 60000 && _dirCache.data.length) return _dirCache.data;
+  const data = await Direktorat.find().sort('kode').lean();
+  _dirCache = { data, ts: Date.now() };
+  return data;
+}
 
 // ── PUBLIC REDIRECT — harus sebelum semua route lain ──
 app.get('/inspira/:code', async (req, res) => {
@@ -659,7 +680,7 @@ app.get('/draft/:id/edit', requireAuth, async (req, res) => {
     const email = await Email.findById(req.params.id);
     if (!email || !canEditDoc(email, req.user._id))
       return res.redirect('/draft');
-    const users  = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan').sort('name');
+    const users  = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan kodeDir').sort('name');
     const counts = await getMailCounts(req.user._id);
     const allowedKodeDir = getAllowedKodeDir(req.user);
     const allowedSifat   = getAllowedSifat(req.user);
@@ -985,7 +1006,7 @@ app.get('/compose/new', requireAuth, async (req, res) => {
         : [];
     }
 
-    const allUsers = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan').sort('name').lean();
+    const allUsers = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan kodeDir').sort('name').lean();
     res.render('compose', { active: 'compose', title: 'Buat Dokumen Baru', users: allUsers, pengirimUsers, allowedKodeDir, allowedSifat, jenisDefault: null, hideJenisTabs: false, ...counts });
   } catch (err) {
     res.render('compose', { active: 'compose', title: 'Buat Dokumen Baru', users: [], pengirimUsers: [], allowedKodeDir: ['PLAN','TECH','MP'], allowedSifat: ['Biasa/Terbuka','Segera'], jenisDefault: null, hideJenisTabs: false, inboxCount: 0, draftCount: 0 });
@@ -1120,7 +1141,7 @@ app.get('/email/:id/preview', requireAuth, async (req, res) => {
     }
 
     const [users, counts] = await Promise.all([
-      User.find({ isActive: true }, 'name email role organization _id').sort({ name: 1 }),
+      User.find({ isActive: true }, 'name email role organization jabatan kodeDir _id').sort({ name: 1 }),
       getMailCounts(req.user._id)
     ]);
     res.render('email-preview', {
@@ -2189,7 +2210,7 @@ app.get('/tugas', requireAuth, async (req, res) => {
     const [myTasks, assignedTasks, users] = await Promise.all([
       Task.find({ 'createdBy.userId': myId }).sort({ createdAt: -1 }),
       Task.find({ 'assignedTo.userId': myId, 'createdBy.userId': { $ne: myId } }).sort({ createdAt: -1 }),
-      User.find({ _id: { $ne: myId }, isActive: true }).select('name email').sort('name')
+      User.find({ _id: { $ne: myId }, isActive: true }).select('name email jabatan kodeDir').sort('name')
     ]);
     const counts = await getMailCounts(myId);
     const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -2641,7 +2662,7 @@ app.get('/compose/internal', requireAuth, async (req, res) => {
       pengirimUsers = kd ? await User.find({ kodeDir: kd, isActive: true }).select('name email enik jabatan kodeDir role').sort('name').lean() : [];
     }
     // Untuk to/cc penerima, ambil semua user kecuali diri sendiri
-    const allUsers = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan').sort('name').lean();
+    const allUsers = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan kodeDir').sort('name').lean();
     res.render('compose', {
       active: 'compose-internal', title: 'Tulis Surat Internal',
       users: allUsers, pengirimUsers, allowedKodeDir, allowedSifat,
@@ -2664,7 +2685,7 @@ app.get('/compose/eksternal', requireAuth, requireDirektur, async (req, res) => 
       const kd = req.user.kodeDir;
       pengirimUsers = kd ? await User.find({ kodeDir: kd, isActive: true }).select('name email enik jabatan kodeDir role').sort('name').lean() : [];
     }
-    const allUsers = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan').sort('name').lean();
+    const allUsers = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan kodeDir').sort('name').lean();
     res.render('compose', {
       active: 'compose-eksternal', title: 'Tulis Surat Eksternal',
       users: allUsers, pengirimUsers, allowedKodeDir, allowedSifat,
@@ -3037,7 +3058,7 @@ app.get('/surat-masuk/:id/pdf', requireAuth, async (req, res) => {
     if (!surat) return res.redirect('/surat-masuk');
     const [docSig, users, counts] = await Promise.all([
       DocumentSignature.findOne({ suratId: surat._id }),
-      User.find({ isActive: true }, 'name email role organization _id').sort({ name: 1 }),
+      User.find({ isActive: true }, 'name email role organization jabatan kodeDir _id').sort({ name: 1 }),
       getMailCounts(req.user._id)
     ]);
     res.render('surat-pdf-editor', {
@@ -3260,7 +3281,7 @@ app.get('/e-sign', requireAuth, async (req, res) => {
         $or: [{ createdBy: req.user._id }, { 'signers.userId': req.user._id }]
       }).sort({ updatedAt: -1 }),
       PersonalDocument.find({ createdBy: req.user._id }).sort({ createdAt: -1 }),
-      User.find({ isActive: true }, 'name email _id').sort({ name: 1 }),
+      User.find({ isActive: true }, 'name email jabatan kodeDir _id').sort({ name: 1 }),
       getMailCounts(req.user._id)
     ]);
     res.render('e-sign', {
@@ -3319,7 +3340,7 @@ app.get('/e-sign/:id', requireAuth, async (req, res) => {
     const isSigner  = session.signers.some(s => s.userId.toString() === req.user._id.toString());
     if (!isCreator && !isSigner) return res.redirect('/e-sign');
     const [users, counts] = await Promise.all([
-      User.find({ isActive: true }, 'name email _id').sort({ name: 1 }),
+      User.find({ isActive: true }, 'name email jabatan kodeDir _id').sort({ name: 1 }),
       getMailCounts(req.user._id)
     ]);
     res.render('e-sign-editor', {
