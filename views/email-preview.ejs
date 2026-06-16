@@ -117,6 +117,28 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
 .doc-subtitle { font-size: 12pt; font-weight: bold; color: #000; text-align: center; margin-bottom: 4px; text-decoration: underline; }
 .doc-nomor-center { font-size: 12pt; text-align: center; color: #000; margin-bottom: 18px; }
 
+/* Naskah butir bernomor (Nota Dinas & Surat Eksternal) */
+.naskah-butir { display: flex; gap: 8px; margin-bottom: 8px; font-size: 12pt; line-height: 1.55; }
+.naskah-butir .butir-no { flex-shrink: 0; width: 22px; text-align: left; }
+.naskah-butir .butir-content { flex: 1; }
+.naskah-butir .butir-teks { text-align: justify; }
+.naskah-butir .butir-teks-akhir { margin-top: 6px; }
+.naskah-butir .butir-sublist { margin-top: 4px; }
+.naskah-butir .butir-sub-item { display: flex; gap: 8px; text-align: justify; margin-bottom: 3px; padding-left: 18px; }
+.naskah-butir .butir-sub-item .sub-no { flex-shrink: 0; width: 18px; }
+.naskah-acara { border-collapse: collapse; margin: 6px 0 6px 0; }
+.naskah-acara td { border: none; padding: 1px 0; font-size: 12pt; line-height: 1.5; vertical-align: top; }
+.naskah-acara td.lbl { min-width: 130px; padding-left: 18px; }
+.naskah-acara td.sep { width: 16px; padding: 0 8px 0 4px; }
+
+/* Blok tanda tangan naskah */
+.naskah-sign { margin-top: 26px; font-size: 12pt; line-height: 1.5; }
+.naskah-sign-right { text-align: left; width: 280px; margin-left: auto; }
+.naskah-sign-left { text-align: left; }
+.naskah-sign .naskah-sign-gap { height: 64px; }
+.naskah-sign .naskah-sign-name { font-weight: bold; text-decoration: underline; }
+.bsre-note { margin-top: 30px; text-align: center; font-style: italic; font-size: 9pt; color: #333; line-height: 1.4; }
+
 /* Standard info table */
 .doc-info-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
 .doc-info-table td {
@@ -392,17 +414,19 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
       <% } else if (tipe === 'Nota Dinas') { %>
       <!-- ── NOTA DINAS ── -->
       <div class="doc-body">
-        <div class="doc-title">NOTA DINAS</div>
-        <p style="text-align:center;margin-bottom:14px;">INTERNAL — PT NUSA INSPIRA TEKNOLOGI</p>
-        <table class="surat-field-table">
-          <tr><td>Kepada</td><td>:</td><td><strong><%= sd.kepada || recipients.join(', ') || '—' %></strong></td></tr>
-          <tr><td>Dari</td><td>:</td><td><%= email.from.name %></td></tr>
-          <tr><td>Nomor</td><td>:</td><td><%= email.nomorSurat %></td></tr>
-          <tr><td>Tanggal</td><td>:</td><td><%= fmtDate(email.createdAt) %></td></tr>
+        <div class="doc-title" style="letter-spacing:4px;">N O T A &nbsp; D I N A S</div>
+        <div class="doc-nomor-center">Nomor : <%= email.nomorSurat %></div>
+        <table class="surat-field-table" style="margin-top:10px;">
+          <tr><td>Kepada Yth.</td><td>:</td><td><strong><%= sd.kepada || recipients.join(', ') || '—' %></strong></td></tr>
+          <tr><td>Dari</td><td>:</td><td><%= sd.ttdJabatan || email.from.name %></td></tr>
           <tr><td>Perihal</td><td>:</td><td><strong><%= email.subject %></strong></td></tr>
         </table>
-        <hr style="border:none;border-top:1px solid #000;margin:12px 0;">
-        <% if (hasBody) { %><div class="doc-para"><%- email.body %></div><% } %>
+        <div style="margin-top:12px;"></div>
+        <% if (sd.butir && sd.butir.length) { %>
+          <%- include('./partials/naskah-butir', { butir: sd.butir }) %>
+        <% } else if (hasBody) { %>
+          <div class="doc-para"><%- email.body %></div>
+        <% } %>
         <% if (sd.budgetRows && sd.budgetRows.length > 0) { %>
         <table class="sppd-table" style="margin-top:10px;">
           <thead><tr><th>No.</th><th>Uraian Kebutuhan</th><th>Jumlah (Rp)</th></tr></thead>
@@ -413,7 +437,56 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
           </tbody>
         </table>
         <% } %>
-        <p class="doc-para" style="margin-top:10px;">Atas perhatian dan tindak lanjutnya, kami ucapkan terima kasih.</p>
+
+        <!-- Blok tanda tangan rata kanan -->
+        <div class="naskah-sign naskah-sign-right">
+          <div><%= sd.ttdKota || 'Tangerang' %>, <%= sd.ttdTanggal ? fmtDateSimple(sd.ttdTanggal) : fmtDate(email.createdAt) %></div>
+          <% if (sd.ttdJabatan) { %><div><%= sd.ttdJabatan %></div><% } %>
+          <div class="naskah-sign-gap"></div>
+          <div class="naskah-sign-name"><%= email.from.name %></div>
+        </div>
+      </div>
+
+      <% } else if (tipe === 'Surat Eksternal') { %>
+      <!-- ── SURAT EKSTERNAL (Surat Dinas) ── -->
+      <div class="doc-body">
+        <p style="margin-bottom:14px;"><%= sd.ttdKota || 'Tangerang' %>, <%= sd.tglSurat ? fmtDateSimple(sd.tglSurat) : fmtDate(email.createdAt) %></p>
+        <table class="surat-field-table">
+          <tr><td>Nomor</td><td>:</td><td><%= email.nomorSurat %></td></tr>
+          <tr><td>Sifat</td><td>:</td><td><%= email.sifat || 'Biasa' %></td></tr>
+          <tr><td>Lampiran</td><td>:</td><td><%= sd.lampiran || '-' %></td></tr>
+          <tr><td>Perihal</td><td>:</td><td><strong><%= email.subject %></strong></td></tr>
+        </table>
+        <div style="margin-top:14px;">
+          <p>Kepada Yth.</p>
+          <% if (sd.kepadaAlamat && sd.kepadaAlamat.trim()) { %>
+            <% sd.kepadaAlamat.split('\n').map(s=>s.trim()).filter(Boolean).forEach(line => { %>
+            <p><%= line %></p>
+            <% }) %>
+          <% } else { %>
+            <% recipients.filter(Boolean).forEach(r => { %><p><strong><%= r %></strong></p><% }) %>
+            <p>Di Tempat</p>
+          <% } %>
+        </div>
+        <div style="margin-top:12px;"></div>
+        <% if (sd.butir && sd.butir.length) { %>
+          <%- include('./partials/naskah-butir', { butir: sd.butir }) %>
+        <% } else if (hasBody) { %>
+          <div class="doc-para"><%- email.body %></div>
+        <% } %>
+        <% if (email.cc && email.cc.length > 0) { %>
+        <p style="margin-top:14px;font-size:10pt;">Tembusan: <%= email.cc.map(r=>r.name).join(', ') %></p>
+        <% } %>
+
+        <!-- Blok tanda tangan rata kiri -->
+        <div class="naskah-sign naskah-sign-left">
+          <% if (sd.ttdJabatan) { %><div><%= sd.ttdJabatan %></div><% } %>
+          <div class="naskah-sign-gap"></div>
+          <div class="naskah-sign-name"><%= email.from.name %></div>
+        </div>
+        <% if (sd.esignNote !== false) { %>
+        <p class="bsre-note">Dokumen ini telah ditandatangani secara elektronik menggunakan sertifikat elektronik yang diterbitkan oleh Balai Sertifikasi Elektronik (BSrE), Badan Siber dan Sandi Negara</p>
+        <% } %>
       </div>
 
       <% } else if (tipe === 'SPPD') { %>

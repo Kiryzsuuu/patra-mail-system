@@ -19,6 +19,16 @@
 .ql-editor { min-height:240px; line-height:1.8; color:var(--gray-800); padding:16px; }
 .ql-editor.ql-blank::before { color:var(--gray-400); font-style:normal; font-size:13.5px; }
 .ql-editor img { max-width:100%; height:auto; border-radius:4px; }
+.sec-header { display:flex; align-items:center; gap:8px; margin-bottom:12px; padding:8px 12px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:8px; font-size:13px; font-weight:600; color:var(--gray-600); }
+.sec-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; background:#071840; color:#fff; }
+.dyn-table { width:100%; border-collapse:collapse; margin-top:8px; }
+.dyn-table th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--gray-500); padding:6px 8px; border-bottom:2px solid var(--gray-200); text-align:left; }
+.dyn-table td { padding:5px 4px; vertical-align:middle; }
+.dyn-table td input, .dyn-table td textarea { font-size:12.5px; padding:5px 8px; }
+.dyn-row-del { background:none; border:none; cursor:pointer; color:var(--gray-400); font-size:16px; padding:2px 6px; }
+.dyn-row-del:hover { color:var(--red-500); }
+.btn-add-row { margin-top:6px; font-size:12px; padding:5px 12px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:6px; cursor:pointer; color:var(--gray-600); }
+.btn-add-row:hover { background:var(--gray-100); }
 </style>
 
 <div class="page-header">
@@ -37,6 +47,7 @@
   <input type="hidden" name="action" id="draftAction" value="preview">
   <input type="hidden" name="jenis" id="jenisHidden" value="<%= email.jenis || 'internal' %>">
   <input type="hidden" name="externalRecipients" id="externalRecipientsHidden" value="[]">
+  <input type="hidden" name="suratData" id="suratDataHidden" value="{}">
 
 <div class="compose-layout">
   <div class="compose-card">
@@ -163,8 +174,59 @@
         </div>
       </div>
 
+      <% const sd = email.suratData || {}; %>
+      <% const _isNaskah = ['Nota Dinas','Surat Eksternal'].includes(email.tipeSurat); %>
+      <% if (_isNaskah) { %>
+      <!-- ISI NASKAH (butir bernomor) -->
+      <div id="sec-naskah" style="margin-bottom:18px;">
+        <div class="sec-header"><span class="sec-badge">ISI NASKAH</span> Butir Surat & Tanda Tangan — <%= email.tipeSurat %></div>
+
+        <% if (email.tipeSurat === 'Surat Eksternal') { %>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="form-group">
+            <label class="form-label">Tanggal Surat</label>
+            <input type="date" id="naskah_tgl_surat" class="form-control" value="<%= sd.tglSurat || '' %>">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Lampiran</label>
+            <input type="text" id="naskah_lampiran" class="form-control" value="<%= sd.lampiran || '' %>" placeholder="cth: - / 1 berkas">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kepada Yth. (alamat tujuan)</label>
+          <textarea id="naskah_kepada_alamat" class="form-control textarea" rows="4" placeholder="Satu baris per baris alamat"><%= sd.kepadaAlamat || '' %></textarea>
+        </div>
+        <% } %>
+
+        <label class="form-label">Butir Surat <span style="font-size:11px;color:var(--gray-400);font-weight:400;">(bernomor 1, 2, 3 …)</span></label>
+        <div id="butirList"></div>
+        <button type="button" class="btn-add-row" onclick="addButir()">+ Tambah Butir</button>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px;">
+          <div class="form-group">
+            <label class="form-label">Kota TTD</label>
+            <input type="text" id="naskah_ttd_kota" class="form-control" value="<%= sd.ttdKota || 'Tangerang' %>">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tanggal TTD</label>
+            <input type="date" id="naskah_ttd_tanggal" class="form-control" value="<%= sd.ttdTanggal || '' %>">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Jabatan Penandatangan</label>
+            <input type="text" id="naskah_ttd_jabatan" class="form-control" value="<%= sd.ttdJabatan || '' %>" placeholder="cth: EVP of Safety Operation">
+          </div>
+        </div>
+        <% if (email.tipeSurat === 'Surat Eksternal') { %>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-600);margin-top:4px;">
+          <input type="checkbox" id="naskah_bsre" <%= sd.esignNote === false ? '' : 'checked' %>>
+          Tampilkan catatan tanda tangan elektronik (BSrE) di kaki surat
+        </label>
+        <% } %>
+      </div>
+      <% } %>
+
       <div class="form-group">
-        <label class="form-label">Isi Surat</label>
+        <label class="form-label"><%= _isNaskah ? 'Catatan Tambahan (opsional)' : 'Isi Surat' %></label>
         <div id="quillEditor"></div>
       </div>
 
@@ -259,10 +321,105 @@ const quill = new Quill('#quillEditor', {
 // Pre-fill body content
 quill.root.innerHTML = `<%- email.body || '' %>`;
 
+// ── BUTIR BUILDER (Nota Dinas & Surat Eksternal) ──
+const IS_NASKAH = <%- JSON.stringify(_isNaskah) %>;
+function addButir(data) {
+  const list = document.getElementById('butirList');
+  if (!list) return;
+  data = data || {};
+  const card = document.createElement('div');
+  card.className = 'butir-card';
+  card.style = 'border:1px solid var(--gray-200);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--gray-50);';
+  const no = list.children.length + 1;
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span class="butir-no" style="font-weight:600;font-size:12.5px;color:var(--gray-600);">Butir ${no}</span>
+      <button type="button" class="dyn-row-del" onclick="this.closest('.butir-card').remove();renumberButir()">×</button>
+    </div>
+    <textarea class="form-control textarea butir-teks" rows="2" placeholder="Teks butir..."></textarea>
+    <div class="butir-sub" style="margin-top:8px;"></div>
+    <button type="button" class="btn-add-row" onclick="addButirSub(this)">+ Sub-poin (a, b, c)</button>
+    <table class="dyn-table butir-tabel" style="margin-top:10px;display:none;">
+      <thead><tr><th style="width:38%;">Label (cth: Hari/Tanggal)</th><th>Isi</th><th style="width:36px;"></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button type="button" class="btn-add-row" onclick="addButirTabelRow(this)">+ Baris tabel acara/agenda</button>
+    <textarea class="form-control textarea butir-akhir" rows="1" style="margin-top:8px;" placeholder="Teks penutup butir (opsional)"></textarea>`;
+  list.appendChild(card);
+  card.querySelector('.butir-teks').value = data.teks || '';
+  card.querySelector('.butir-akhir').value = data.teksAkhir || '';
+  (data.sub || []).forEach(s => addButirSub(card.querySelector('.butir-sub').nextElementSibling, s));
+  (data.tabel || []).forEach(r => addButirTabelRow(card.querySelector('.butir-tabel').nextElementSibling, r));
+}
+function renumberButir() {
+  Array.from(document.querySelectorAll('#butirList .butir-card .butir-no')).forEach((el,i)=>{ el.textContent='Butir '+(i+1); });
+}
+function addButirSub(btn, val) {
+  const wrap = btn.closest('.butir-card').querySelector('.butir-sub');
+  const row = document.createElement('div');
+  row.style = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+  const letter = String.fromCharCode(97 + wrap.children.length);
+  row.innerHTML = `<span class="item-num" style="width:18px;font-weight:600;">${letter}.</span>
+    <input type="text" class="form-control" placeholder="Isi sub-poin..." style="flex:1;">
+    <button type="button" class="dyn-row-del" onclick="const w=this.closest('.butir-sub');this.parentElement.remove();renumberButirSub(w)">×</button>`;
+  wrap.appendChild(row);
+  if (val) row.querySelector('input').value = val;
+}
+function renumberButirSub(wrap) {
+  Array.from(wrap.children).forEach((r,i)=>{ const n=r.querySelector('.item-num'); if(n) n.textContent=String.fromCharCode(97+i)+'.'; });
+}
+function addButirTabelRow(btn, data) {
+  const table = btn.closest('.butir-card').querySelector('.butir-tabel');
+  table.style.display = '';
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><input type="text" class="form-control bt-label" placeholder="Hari/Tanggal"></td>
+    <td><textarea class="form-control bt-value" rows="1" placeholder="Isi (boleh beberapa baris)"></textarea></td>
+    <td><button type="button" class="dyn-row-del" onclick="this.closest('tr').remove()">×</button></td>`;
+  table.querySelector('tbody').appendChild(tr);
+  if (data) { tr.querySelector('.bt-label').value = data.label || ''; tr.querySelector('.bt-value').value = data.value || ''; }
+}
+function collectButir() {
+  return Array.from(document.querySelectorAll('#butirList .butir-card')).map(card => ({
+    teks: card.querySelector('.butir-teks').value.trim(),
+    sub: Array.from(card.querySelectorAll('.butir-sub input')).map(i=>i.value.trim()).filter(Boolean),
+    tabel: Array.from(card.querySelectorAll('.butir-tabel tbody tr')).map(tr=>({
+      label: tr.querySelector('.bt-label').value.trim(),
+      value: tr.querySelector('.bt-value').value.trim()
+    })).filter(r=>r.label||r.value),
+    teksAkhir: card.querySelector('.butir-akhir').value.trim()
+  })).filter(b => b.teks || b.sub.length || b.tabel.length);
+}
+function dv(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
+function collectSuratData() {
+  const sd = <%- JSON.stringify(email.suratData || {}) %> || {};
+  if (!IS_NASKAH) return sd;
+  sd.butir = collectButir();
+  sd.ttdKota = dv('naskah_ttd_kota');
+  sd.ttdTanggal = dv('naskah_ttd_tanggal');
+  sd.ttdJabatan = dv('naskah_ttd_jabatan');
+  if ('<%= email.tipeSurat %>' === 'Surat Eksternal') {
+    sd.tglSurat = dv('naskah_tgl_surat');
+    sd.lampiran = dv('naskah_lampiran');
+    sd.kepadaAlamat = dv('naskah_kepada_alamat');
+    const bsre = document.getElementById('naskah_bsre');
+    sd.esignNote = bsre ? bsre.checked : true;
+  }
+  return sd;
+}
+// Prefill butir dari data tersimpan
+<% if (_isNaskah) { %>
+(function(){
+  const existing = <%- JSON.stringify((email.suratData && email.suratData.butir) || []) %>;
+  if (existing.length) existing.forEach(b => addButir(b));
+  else addButir();
+})();
+<% } %>
+
 // Submit
 function submitDraft(action) {
   document.getElementById('bodyHidden').value = quill.root.innerHTML;
   document.getElementById('externalRecipientsHidden').value = JSON.stringify(extList);
+  document.getElementById('suratDataHidden').value = JSON.stringify(collectSuratData());
   document.getElementById('draftAction').value = action;
   document.getElementById('editForm').submit();
 }

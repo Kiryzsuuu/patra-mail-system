@@ -294,6 +294,62 @@
       </div>
 
       <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- SECTION: NASKAH (Nota Dinas & Surat Eksternal)        -->
+      <!-- Butir bernomor + sub-poin (a/b) + tabel acara + TTD   -->
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <div id="sec-naskah" style="display:none;">
+        <div class="sec-header">
+          <span class="sec-badge">ISI NASKAH</span>
+          Butir Surat & Tanda Tangan
+        </div>
+
+        <!-- Field khusus Surat Eksternal -->
+        <div id="naskah-ext-fields" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-group">
+              <label class="form-label">Tanggal Surat</label>
+              <input type="date" id="naskah_tgl_surat" class="form-control">
+              <small class="form-hint">Kosongkan untuk pakai tanggal hari ini.</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Lampiran</label>
+              <input type="text" id="naskah_lampiran" class="form-control" placeholder="cth: - / 1 berkas">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kepada Yth. (alamat tujuan)</label>
+            <textarea id="naskah_kepada_alamat" class="form-control textarea" rows="4" placeholder="Satu baris per baris alamat, cth:&#10;Direktur Keamanan Siber dan Sandi&#10;Badan Siber dan Sandi Negara&#10;Di Tempat"></textarea>
+            <small class="form-hint">Tiap baris ditampilkan sebagai baris terpisah. Kosongkan untuk pakai daftar penerima.</small>
+          </div>
+        </div>
+
+        <!-- Butir bernomor -->
+        <label class="form-label">Butir Surat <span style="font-size:11px;color:var(--gray-400);font-weight:400;">(bernomor 1, 2, 3 …)</span></label>
+        <div id="butirList"></div>
+        <button type="button" class="btn-add-row" onclick="addButir()">+ Tambah Butir</button>
+
+        <!-- Blok tanda tangan -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px;">
+          <div class="form-group">
+            <label class="form-label">Kota TTD</label>
+            <input type="text" id="naskah_ttd_kota" class="form-control" placeholder="cth: Tangerang" value="Tangerang">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tanggal TTD</label>
+            <input type="date" id="naskah_ttd_tanggal" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Jabatan Penandatangan</label>
+            <input type="text" id="naskah_ttd_jabatan" class="form-control" placeholder="cth: EVP of Safety Operation">
+          </div>
+        </div>
+        <label class="cosign-toggle" id="naskah-bsre-wrap" style="display:none;margin-top:4px;">
+          <input type="checkbox" id="naskah_bsre" checked>
+          Tampilkan catatan tanda tangan elektronik (BSrE) di kaki surat
+        </label>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
       <!-- SECTION: SPPD                                          -->
       <!-- ═══════════════════════════════════════════════════════ -->
       <div id="sec-sppd" style="display:none;">
@@ -1142,14 +1198,13 @@ function updateSifat(sel) {
 
 // ── TIPE SURAT ──
 let currentTipe = 'Surat';
-const ALL_SECS = ['sec-memo','sec-sppd','sec-tugas','sec-delegasi','sec-keterangan','sec-pernyataan','sec-kuasa','sec-pengantar','sec-keputusan','sec-undangan','sec-statuta','sec-surat-ext','sec-pihak-kedua','sec-spk','sec-invoice'];
+const ALL_SECS = ['sec-memo','sec-naskah','sec-sppd','sec-tugas','sec-delegasi','sec-keterangan','sec-pernyataan','sec-kuasa','sec-pengantar','sec-keputusan','sec-undangan','sec-statuta','sec-surat-ext','sec-pihak-kedua','sec-spk','sec-invoice'];
 const TIPE_SECS = {
   'Surat':['sec-surat-ext'],  'Surat Resmi':['sec-surat-ext'],  'Surat Formal':['sec-surat-ext'],
   'Surat Instruksi':['sec-surat-ext'],  'Surat Edaran':[],
   'Surat Rahasia':['sec-surat-ext'], 'Surat Konfidensial':['sec-surat-ext'],
-  // Format surat eksternal dihilangkan untuk sementara (pending docs)
-  'Surat Eksternal': [],
-  'Memo':['sec-memo'], 'Nota Dinas':['sec-memo'],
+  'Surat Eksternal': ['sec-naskah'],
+  'Memo':['sec-memo'], 'Nota Dinas':['sec-memo','sec-naskah'],
   'SPPD':['sec-sppd'],
   'Surat Tugas':['sec-tugas'],
   'Surat Tugas Pendelegasian':['sec-delegasi'],
@@ -1268,6 +1323,11 @@ function onTipeChange(val) {
   // Show nota budget only for Nota Dinas
   const notaBudget = document.getElementById('sec-nota-budget');
   if (notaBudget) notaBudget.style.display = val === 'Nota Dinas' ? '' : 'none';
+  // Naskah: field eksternal & catatan BSrE hanya untuk Surat Eksternal
+  const naskahExt  = document.getElementById('naskah-ext-fields');
+  const bsreWrap   = document.getElementById('naskah-bsre-wrap');
+  if (naskahExt) naskahExt.style.display = val === 'Surat Eksternal' ? '' : 'none';
+  if (bsreWrap)  bsreWrap.style.display  = val === 'Surat Eksternal' ? '' : 'none';
   const nilaiKontrak = document.getElementById('sec-nilai-kontrak');
   if (nilaiKontrak) nilaiKontrak.style.display = val === 'Kontrak' ? '' : 'none';
   // Filter kodeDir options: direksi untuk SK, divisi untuk lainnya
@@ -1481,6 +1541,68 @@ function recalcInv() {
   document.getElementById('inv_total_display').textContent    = fmtRp(total < 0 ? 0 : total);
 }
 
+// ── BUTIR BUILDER (Nota Dinas & Surat Eksternal) ──
+function addButir() {
+  const list = document.getElementById('butirList');
+  const card = document.createElement('div');
+  card.className = 'butir-card';
+  card.style = 'border:1px solid var(--gray-200);border-radius:8px;padding:12px;margin-bottom:10px;background:var(--gray-50);';
+  const no = list.children.length + 1;
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span class="butir-no" style="font-weight:600;font-size:12.5px;color:var(--gray-600);">Butir ${no}</span>
+      <button type="button" class="dyn-row-del" onclick="this.closest('.butir-card').remove();renumberButir()">×</button>
+    </div>
+    <textarea class="form-control textarea butir-teks" rows="2" placeholder="Teks butir, cth: Mendasari Peraturan ... / Sehubungan dengan ... disampaikan undangan ... pada:"></textarea>
+    <div class="butir-sub" style="margin-top:8px;"></div>
+    <button type="button" class="btn-add-row" style="margin-top:6px;" onclick="addButirSub(this)">+ Sub-poin (a, b, c)</button>
+    <table class="dyn-table butir-tabel" style="margin-top:10px;display:none;">
+      <thead><tr><th style="width:38%;">Label (cth: Hari/Tanggal)</th><th>Isi</th><th style="width:36px;"></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button type="button" class="btn-add-row" style="margin-top:6px;" onclick="addButirTabelRow(this)">+ Baris tabel acara/agenda</button>
+    <textarea class="form-control textarea butir-akhir" rows="1" style="margin-top:8px;" placeholder="Teks penutup butir (opsional, cth: Selanjutnya, mohon ...)"></textarea>`;
+  list.appendChild(card);
+}
+function renumberButir() {
+  Array.from(document.querySelectorAll('#butirList .butir-card .butir-no')).forEach((el,i)=>{ el.textContent = 'Butir '+(i+1); });
+}
+function addButirSub(btn) {
+  const wrap = btn.closest('.butir-card').querySelector('.butir-sub');
+  const row = document.createElement('div');
+  row.className = 'dyn-list-item';
+  row.style = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+  const letter = String.fromCharCode(97 + wrap.children.length);
+  row.innerHTML = `<span class="item-num" style="width:18px;font-weight:600;">${letter}.</span>
+    <input type="text" class="form-control" placeholder="Isi sub-poin...">
+    <button type="button" class="dyn-row-del" onclick="const w=this.closest('.butir-sub');this.parentElement.remove();renumberButirSub(w)">×</button>`;
+  wrap.appendChild(row);
+}
+function renumberButirSub(wrap) {
+  Array.from(wrap.children).forEach((r,i)=>{ const n=r.querySelector('.item-num'); if(n) n.textContent=String.fromCharCode(97+i)+'.'; });
+}
+function addButirTabelRow(btn) {
+  const table = btn.closest('.butir-card').querySelector('.butir-tabel');
+  table.style.display = '';
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><input type="text" class="form-control bt-label" placeholder="Hari/Tanggal"></td>
+    <td><textarea class="form-control bt-value" rows="1" placeholder="Isi (boleh beberapa baris)"></textarea></td>
+    <td><button type="button" class="dyn-row-del" onclick="this.closest('tr').remove()">×</button></td>`;
+  table.querySelector('tbody').appendChild(tr);
+}
+function collectButir() {
+  return Array.from(document.querySelectorAll('#butirList .butir-card')).map(card => {
+    const teks = card.querySelector('.butir-teks').value.trim();
+    const sub  = Array.from(card.querySelectorAll('.butir-sub input')).map(i=>i.value.trim()).filter(Boolean);
+    const tabel = Array.from(card.querySelectorAll('.butir-tabel tbody tr')).map(tr=>({
+      label: tr.querySelector('.bt-label').value.trim(),
+      value: tr.querySelector('.bt-value').value.trim()
+    })).filter(r => r.label || r.value);
+    const teksAkhir = card.querySelector('.butir-akhir').value.trim();
+    return { teks, sub, tabel, teksAkhir };
+  }).filter(b => b.teks || b.sub.length || b.tabel.length);
+}
+
 // ── COLLECT SURAT DATA ──
 function collectSuratData() {
   const sd = {};
@@ -1494,7 +1616,21 @@ function collectSuratData() {
         uraian: v('br_uraian_'+id),
         jumlah: v('br_jumlah_'+id)
       })).filter(r => r.uraian);
+      sd.butir = collectButir();
+      sd.ttdKota = v('naskah_ttd_kota');
+      sd.ttdTanggal = v('naskah_ttd_tanggal');
+      sd.ttdJabatan = v('naskah_ttd_jabatan');
     }
+  }
+  else if (t === 'Surat Eksternal') {
+    sd.tglSurat = v('naskah_tgl_surat');
+    sd.lampiran = v('naskah_lampiran');
+    sd.kepadaAlamat = v('naskah_kepada_alamat');
+    sd.butir = collectButir();
+    sd.ttdKota = v('naskah_ttd_kota');
+    sd.ttdTanggal = v('naskah_ttd_tanggal');
+    sd.ttdJabatan = v('naskah_ttd_jabatan');
+    sd.esignNote = document.getElementById('naskah_bsre') ? document.getElementById('naskah_bsre').checked : true;
   }
   else if (t === 'SPPD') {
     sd.namaPegawai = v('sppd_nama'); sd.jabatanPegawai = v('sppd_jabatan');
@@ -1672,6 +1808,17 @@ document.addEventListener('click', e => {
 <% if (jenisDefault === 'eksternal') { %>
 setJenis('eksternal');
 <% } %>
+
+// ── INIT TIPE DEFAULT (aktifkan section sesuai tipe terpilih) ──
+(function initTipe(){
+  const sel = document.getElementById('tipeSuratSelect');
+  const val = sel && sel.value ? sel.value : (document.getElementById('tipeSuratHidden').value || 'Surat');
+  onTipeChange(val);
+  // Sediakan satu butir kosong awal untuk Nota Dinas / Surat Eksternal
+  if ((val === 'Nota Dinas' || val === 'Surat Eksternal') && document.getElementById('butirList').children.length === 0) {
+    addButir();
+  }
+})();
 
 // ── PERUSAHAAN PICKER ──
 let _perusahaanData = [];

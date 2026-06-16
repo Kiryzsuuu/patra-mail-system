@@ -1,0 +1,28 @@
+<%
+  // Render daftar butir bernomor (1, 2, 3) dengan sub-poin (a, b) & tabel acara/agenda.
+  // Param: butir = [{ teks, sub:[...], tabel:[{label,value}], teksAkhir }]
+  function _nl2br(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br/>'); }
+%>
+<% (butir || []).forEach(function(b, i) { %>
+<div class="naskah-butir">
+  <div class="butir-no"><%= i + 1 %>.</div>
+  <div class="butir-content">
+    <% if (b.teks) { %><div class="butir-teks"><%- _nl2br(b.teks) %></div><% } %>
+    <% if (b.sub && b.sub.length) { %>
+      <div class="butir-sublist">
+      <% b.sub.forEach(function(s, j) { %>
+        <div class="butir-sub-item"><span class="sub-no"><%= String.fromCharCode(97 + j) %>.</span><span><%- _nl2br(s) %></span></div>
+      <% }) %>
+      </div>
+    <% } %>
+    <% if (b.tabel && b.tabel.length) { %>
+      <table class="naskah-acara">
+        <% b.tabel.forEach(function(r) { %>
+        <tr><td class="lbl"><%= r.label %></td><td class="sep">:</td><td><%- _nl2br(r.value) %></td></tr>
+        <% }) %>
+      </table>
+    <% } %>
+    <% if (b.teksAkhir) { %><div class="butir-teks butir-teks-akhir"><%- _nl2br(b.teksAkhir) %></div><% } %>
+  </div>
+</div>
+<% }) %>

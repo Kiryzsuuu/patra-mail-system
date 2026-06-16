@@ -674,7 +674,7 @@ app.get('/draft/:id/edit', requireAuth, async (req, res) => {
 app.post('/draft/:id/update', requireAuth, lampiranUpload.single('lampiran'), async (req, res) => {
   try {
     const { to, cc, subject, body, tag, berkas, sifat, jenis, externalRecipients,
-            kodeDiv, kodeLay, kodeDir, pengirimResmi, sumberTemplate, action, hapusLampiran } = req.body;
+            kodeDiv, kodeLay, kodeDir, pengirimResmi, sumberTemplate, action, hapusLampiran, suratData } = req.body;
     const email = await Email.findById(req.params.id);
     if (!email || !canEditDoc(email, req.user._id))
       return res.json({ ok: false });
@@ -695,6 +695,8 @@ app.post('/draft/:id/update', requireAuth, lampiranUpload.single('lampiran'), as
     ]);
     let extRecipients = [];
     try { extRecipients = JSON.parse(externalRecipients || '[]'); } catch {}
+    let parsedSuratData = email.suratData || {};
+    if (suratData !== undefined) { try { parsedSuratData = JSON.parse(suratData || '{}'); } catch {} }
 
     const ROMAN_M = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
     const seqPart = (email.nomorSurat || '').split('/')[0] || '001';
@@ -727,6 +729,7 @@ app.post('/draft/:id/update', requireAuth, lampiranUpload.single('lampiran'), as
       kodeDir:        kd,
       pengirimResmi:  pengirimResmi?.trim() || email.pengirimResmi || '',
       sumberTemplate: sumberTemplate || email.sumberTemplate || 'internal',
+      suratData:      parsedSuratData,
       nomorSurat,
       ...lampiranUpdate
     });
