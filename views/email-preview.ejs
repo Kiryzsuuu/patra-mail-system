@@ -94,8 +94,8 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
 .doc-pill { font-size: 10px; font-weight: 600; padding: 2px 9px; border-radius: 3px; border: 1px solid #d1d5db; color: #374151; background: #fff; }
 .doc-pill.tipe { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
 
-/* Body container — margin: 2.54cm (1 inch) semua sisi */
-.doc-body { padding: 20px 96px 96px 96px; position: relative; z-index: 1; line-height: 1.6; }
+/* Body container — margin 1cm sisi kiri/kanan */
+.doc-body { padding: 1cm 1cm 96px 1cm; position: relative; z-index: 1; line-height: 1.6; text-align: justify; }
 .doc-title {
   font-size: 13pt; font-weight: bold; color: #000; margin: 14px 0 4px;
   text-align: center; text-transform: uppercase;
@@ -195,7 +195,7 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
 .statuta-table td:first-child { width: 40px; text-align: center; }
 
 /* Signature area */
-.doc-sig-area { padding: 20px 96px 96px 96px; border-top: none; position: relative; z-index: 1; }
+.doc-sig-area { padding: 1cm 1cm 96px 1cm; border-top: none; position: relative; z-index: 1; }
 .doc-sig-hint { font-size: 12px; color: #9ca3af; font-style: italic; text-align: center; padding: 20px 0; }
 
 /* QR Stamp */
@@ -207,9 +207,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
   padding: 0; text-align: center;
   overflow: visible;
 }
-.qr-stamp-date { font-size: 11pt; font-family: 'Times New Roman', serif; color: #000; margin-bottom: 6px; white-space: nowrap; text-align: left; width: 100%; }
+.qr-stamp-date { font-size: 11pt; font-family: 'Times New Roman', serif; color: #000; margin-bottom: 10px; white-space: nowrap; text-align: center; width: 100%; flex-shrink: 0; }
 .qr-stamp:hover, .qr-stamp.active { outline-color: #1a56a8; }
-.qr-stamp img { width: 100%; flex: 1; min-height: 0; object-fit: contain; display: block; }
+.qr-stamp img { width: 100%; flex: 1; min-height: 0; object-fit: contain; display: block; margin: 0 auto; }
 .qr-stamp-sig { width: 95%; border-top: 1.5px solid #111; margin: 5px 0 3px; flex-shrink: 0; }
 .qr-stamp-name { font-size: 9.5px; font-weight: 700; color: #111; text-align: center; padding: 0 4px; line-height: 1.5; flex-shrink: 0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .qr-stamp-role { font-size: 8.5px; font-weight: 400; color: #111; text-align: center; padding: 1px 4px 3px; flex-shrink: 0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
@@ -1062,7 +1062,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         data-date-str="<%= stampDateStr %>"
         data-lokasi="<%= stampLokasi %>"
         style="left:<%= s.position.x %>px;top:<%= s.position.y %>px;width:<%= s.position.width %>px;height:<%= s.position.height %>px;">
+        <% if (s.showDate !== false) { %>
         <div class="qr-stamp-date"><%= stampLokasi %>, <%= stampDateStr %></div>
+        <% } %>
         <% if (s.qrDataUrl) { %>
         <img src="<%= s.qrDataUrl %>" alt="QR" draggable="false">
         <% } else { %>
