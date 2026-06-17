@@ -1200,7 +1200,7 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
             </div>
             <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:6px;margin-bottom:4px;">Opsi:</div>
             <div class="display-mode-row">
-              <button type="button" class="dm-btn <%= !s.showDate || s.showDate !== false ? 'active' : '' %>" id="btnDate-<%= s._id %>" onclick="toggleDate('<%= s._id %>',this)">Tanggal</button>
+              <button type="button" class="dm-btn <%= s.showDate !== false ? 'active' : '' %>" id="btnDate-<%= s._id %>" onclick="toggleDate('<%= s._id %>',this)">Tanggal</button>
             </div>
           </div>
         </div>
@@ -1438,9 +1438,14 @@ function toggleDate(id, btn) {
   const stamp = document.getElementById('stamp-' + id);
   if (!stamp) return;
   const isOn = stamp.dataset.showDate !== '0';
-  stamp.dataset.showDate = isOn ? '0' : '1';
-  btn.classList.toggle('active', !isOn);
+  const newShow = !isOn;
+  stamp.dataset.showDate = newShow ? '1' : '0';
+  btn.classList.toggle('active', newShow);
   rebuildStamp(id);
+  fetch(`/email/${EMAIL_ID}/sign/update-lokasi-tanggal`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ signerId: id, showDate: newShow })
+  });
 }
 
 // ── JABATAN EDIT ──

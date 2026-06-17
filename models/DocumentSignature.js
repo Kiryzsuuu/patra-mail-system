@@ -9,6 +9,7 @@ const docSignerSchema = new mongoose.Schema({
   qrDataUrl:      { type: String, default: '' },
   jabatanDisplay: { type: String, default: '' },
   displayMode:    { type: String, enum: ['full','name_only','qr_only'], default: 'full' },
+  showDate:       { type: Boolean, default: true },
   status:         { type: String, enum: ['pending','signed'], default: 'pending' },
   position: {
     x:      { type: Number, default: 60 },

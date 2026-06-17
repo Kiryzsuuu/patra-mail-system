@@ -1258,10 +1258,11 @@ app.post('/email/:id/sign/update-position', requireAuth, async (req, res) => {
 
 app.post('/email/:id/sign/update-lokasi-tanggal', requireAuth, async (req, res) => {
   try {
-    const { signerId, lokasi, tanggal } = req.body;
+    const { signerId, lokasi, tanggal, showDate } = req.body;
     const update = {};
     if (lokasi !== undefined) update['signers.$.lokasiTtd'] = lokasi;
     if (tanggal !== undefined) update['signers.$.tanggalTtd'] = tanggal ? new Date(tanggal) : null;
+    if (showDate !== undefined) update['signers.$.showDate'] = showDate;
     await DocumentSignature.updateOne(
       { emailId: req.params.id, 'signers._id': signerId },
       { $set: update }
