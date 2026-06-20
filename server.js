@@ -32,13 +32,18 @@ const ESignSession     = require('./models/ESignSession');
 const PersonalDocument = require('./models/PersonalDocument');
 const QRCode = require('qrcode');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
-const puppeteer = require('puppeteer');
+// Puppeteer di-require lazy supaya app tetap boot walau modul/Chromium belum terpasang
+let puppeteer = null;
+function loadPuppeteer() {
+  if (!puppeteer) puppeteer = require('puppeteer');
+  return puppeteer;
+}
 
 // ── Shared headless browser untuk render PDF (preview == download) ──
 let _pdfBrowser = null;
 async function getPdfBrowser() {
   if (_pdfBrowser && _pdfBrowser.isConnected && _pdfBrowser.isConnected()) return _pdfBrowser;
-  _pdfBrowser = await puppeteer.launch({
+  _pdfBrowser = await loadPuppeteer().launch({
     headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
   });
