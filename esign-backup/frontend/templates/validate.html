@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Validasi Dokumen — InARSign</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Inter:wght@300;400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --maroon: #6b1a1a; --maroon2: #8b2020; --maroon-light: #f9f0f0;
+  --success: #2d6a4f; --success-bg: #f0f7f4; --success-border: #a7d4bc;
+  --warn: #92400e; --warn-bg: #fef3c7; --warn-border: #fcd34d;
+  --danger: #991b1b; --danger-bg: #fef2f2; --danger-border: #fca5a5;
+  --text: #1a0a0a; --text2: #6b4a4a; --text3: #a08080;
+  --border: #e8ddd8; --surface: #fff; --bg: #faf8f6;
+  --serif: 'Playfair Display', serif; --sans: 'Inter', sans-serif; --mono: 'DM Mono', monospace;
+  --shadow: 0 4px 24px rgba(107,26,26,.10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #6b1a1a;
+  min-height: 100vh; font-family: var(--sans);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 24px;
+  position: relative; overflow-y: auto;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+}
+.bg-ornament {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+}
+.card { position: relative; z-index: 1; }
+
+.card {
+  width: 100%; max-width: 520px;
+  background: var(--surface); border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden;
+}
+
+.card-top {
+  background: var(--maroon); padding: 20px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.brand { font-family: var(--serif); font-size: 20px; color: #fff; }
+.brand span { font-style: italic; opacity: .85; }
+.brand-sub { font-size: 11px; color: rgba(255,255,255,.6); margin-top: 2px; }
+
+.card-header {
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
+}
+.status-icon {
+  width: 56px; height: 56px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; flex-shrink: 0;
+}
+.icon-valid   { background: var(--success-bg); border: 1px solid var(--success-border); }
+.icon-invalid { background: var(--danger-bg); border: 1px solid var(--danger-border); }
+.icon-tampered { background: var(--warn-bg); border: 1px solid var(--warn-border); }
+
+.status-title { font-size: 18px; font-weight: 700; font-family: var(--serif); }
+.status-sub   { font-size: 13px; color: var(--text2); margin-top: 4px; line-height: 1.4; }
+.valid-color   { color: var(--success); }
+.invalid-color { color: var(--danger); }
+.tampered-color { color: var(--warn); }
+
+.card-body { padding: 24px 32px; }
+
+.info-row {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 10px 0; border-bottom: 1px solid var(--border); gap: 16px;
+}
+.info-row:last-child { border-bottom: none; }
+.info-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; flex-shrink: 0; font-weight: 600; }
+.info-val   { font-size: 13px; color: var(--text); text-align: right; word-break: break-all; font-weight: 500; }
+.info-val.mono { font-family: var(--mono); font-size: 11px; color: var(--text2); }
+
+.tamper-alert {
+  background: var(--warn-bg); border: 1px solid var(--warn-border);
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 20px;
+  font-size: 13px; color: var(--warn); display: flex; gap: 10px; line-height: 1.5;
+}
+
+.signers-section { margin-top: 20px; }
+.signers-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; font-weight: 600; }
+.signer-item {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
+}
+.signer-avatar { width: 34px; height: 34px; border-radius: 8px; background: var(--maroon-light); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.signer-name { font-size: 13px; font-weight: 600; }
+.signer-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+.card-footer {
+  padding: 16px 32px 20px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.footer-note { font-size: 11px; color: var(--text3); }
+.footer-copy { font-size: 11px; color: var(--text3); }
+.footer-copy strong { color: var(--maroon); }
+
+.check-anim { display: inline-block; animation: popIn .4s cubic-bezier(.36,.07,.19,.97); }
+@keyframes popIn { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+</style>
+</head>
+<body>
+
+<div class="bg-ornament">
+  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;">
+    <circle cx="75%" cy="20%" r="380" fill="none" stroke="#7a1e1e" stroke-width="80"/>
+    <circle cx="15%" cy="85%" r="280" fill="none" stroke="#7a1e1e" stroke-width="50"/>
+    <circle cx="88%" cy="72%" r="200" fill="none" stroke="#701818" stroke-width="40"/>
+    <circle cx="75%" cy="20%" r="200" fill="none" stroke="rgba(200,169,90,0.12)" stroke-width="1"/>
+    <circle cx="75%" cy="20%" r="260" fill="none" stroke="rgba(200,169,90,0.07)" stroke-width="1"/>
+    <circle cx="15%" cy="85%" r="150" fill="none" stroke="rgba(200,169,90,0.1)" stroke-width="1"/>
+    <circle cx="10%" cy="12%" r="4" fill="rgba(200,169,90,0.2)"/>
+    <circle cx="92%" cy="92%" r="4" fill="rgba(200,169,90,0.2)"/>
+  </svg>
+</div>
+
+<div class="card">
+
+  <div class="card-top">
+    <div>
+      <div class="brand">In<span>AR</span>Sign</div>
+      <div class="brand-sub">Sistem Tanda Tangan Digital Pribadi</div>
+    </div>
+    <div style="font-size:11px;color:rgba(255,255,255,.5);">Halaman Validasi</div>
+  </div>
+
+  {% set valid = result.valid %}
+  {% set status = result.status %}
+
+  <div class="card-header">
+    <div class="status-icon {{ 'icon-valid' if valid else ('icon-tampered' if status == 'tampered' else 'icon-invalid') }}">
+      <span class="check-anim">
+        {{ '✓' if valid else ('⚠' if status == 'tampered' else '✗') }}
+      </span>
+    </div>
+    <div>
+      <div class="status-title {{ 'valid-color' if valid else ('tampered-color' if status == 'tampered' else 'invalid-color') }}">
+        {% if valid %}Dokumen Valid &amp; Sah
+        {% elif status == 'tampered' %}Terindikasi Dimanipulasi
+        {% else %}Dokumen Tidak Valid
+        {% endif %}
+      </div>
+      <div class="status-sub">{{ result.message }}</div>
+    </div>
+  </div>
+
+  <div class="card-body">
+
+    {% if status == 'tampered' %}
+    <div class="tamper-alert">
+      ⚠ <div>QR code ini mungkin dipindahkan dari dokumen lain, atau dokumen telah diubah setelah ditandatangani. Jangan percaya dokumen ini.</div>
+    </div>
+    {% endif %}
+
+    {% if valid %}
+    <div class="info-row">
+      <div class="info-label">Nama File</div>
+      <div class="info-val">{{ result.filename }}</div>
+    </div>
+    <div class="info-row">
+      <div class="info-label">Status</div>
+      <div class="info-val">
+        {% if result.doc_status == 'locked' %}Dikunci (Read-only)
+        {% elif result.doc_status == 'cosign_open' %}Multi-signature
+        {% else %}Ditandatangani
+        {% endif %}
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-label">Penanda Tangan</div>
+      <div class="info-val">{{ result.signer_name }}</div>
+    </div>
+    {% if result.jabatan %}
+    <div class="info-row">
+      <div class="info-label">Jabatan</div>
+      <div class="info-val">{{ result.jabatan }}</div>
+    </div>
+    {% endif %}
+    {% if result.email_display %}
+    <div class="info-row">
+      <div class="info-label">Email</div>
+      <div class="info-val">{{ result.email_display }}</div>
+    </div>
+    {% endif %}
+    <div class="info-row">
+      <div class="info-label">Waktu Sign</div>
+      <div class="info-val">{{ result.signed_at[:16].replace('T',' ') }} UTC</div>
+    </div>
+    {% if result.reason %}
+    <div class="info-row">
+      <div class="info-label">Alasan / Reason</div>
+      <div class="info-val">{{ result.reason }}</div>
+    </div>
+    {% endif %}
+    <div class="info-row">
+      <div class="info-label">Halaman</div>
+      <div class="info-val">Halaman {{ result.page }}</div>
+    </div>
+    <div class="info-row">
+      <div class="info-label">ID Dokumen</div>
+      <div class="info-val mono">{{ result.doc_id[:16] }}...</div>
+    </div>
+
+    {% set unique_signers = [] %}
+    {% for s in result.all_signers %}
+      {% if s.name not in unique_signers|map(attribute='name')|list %}
+        {% set _ = unique_signers.append(s) %}
+      {% endif %}
+    {% endfor %}
+
+    {% if unique_signers | length > 1 %}
+    <div class="signers-section">
+      <div class="signers-title">Semua Penanda Tangan ({{ unique_signers | length }})</div>
+      {% for s in unique_signers %}
+      <div class="signer-item">
+        <div class="signer-avatar"></div>
+        <div>
+          <div class="signer-name">{{ s.name }}</div>
+          <div class="signer-meta">{{ s.type | title }} · {{ s.signed_at[:10] }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if result.all_signers | length > 1 %}
+    <div class="info-row" style="margin-top:8px;">
+      <div class="info-label">Halaman Ditandatangani</div>
+      <div class="info-val">{{ result.all_signers | map(attribute='page') | list | join(', ') if result.all_signers[0].page is defined else result.all_signers | length ~ ' halaman' }}</div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="info-row">
+      <div class="info-label">QR Token</div>
+      <div class="info-val mono">{{ qr_token[:24] }}...</div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div class="card-footer">
+    <div class="footer-note">Dokumen ini telah diverifikasi keasliannya oleh Indra Aulia</div>
+    <div class="footer-copy">&copy; 2026 <strong>Indra Aulia</strong></div>
+  </div>
+
+</div>
+
+</body>
+</html>

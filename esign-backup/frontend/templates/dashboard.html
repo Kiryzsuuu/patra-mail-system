@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InARSign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #faf8f6;
+  --surface: #ffffff;
+  --surface2: #f5f0ee;
+  --border: #e8ddd8;
+  --maroon: #6b1a1a;
+  --maroon2: #8b2020;
+  --maroon-light: #f9f0f0;
+  --maroon-pale: #fdf5f5;
+  --text: #1a0a0a;
+  --text2: #6b4a4a;
+  --text3: #a08080;
+  --success: #2d6a4f;
+  --success-bg: #f0f7f4;
+  --warn: #92400e;
+  --warn-bg: #fef3c7;
+  --danger: #991b1b;
+  --mono: 'DM Mono', monospace;
+  --serif: 'Playfair Display', serif;
+  --sans: 'Inter', sans-serif;
+  --shadow: 0 1px 3px rgba(107,26,26,.08), 0 4px 16px rgba(107,26,26,.06);
+  --shadow-lg: 0 4px 24px rgba(107,26,26,.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+/* LOGIN */
+#login-screen {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh;
+  background: #6b1a1a;
+  position: relative;
+  overflow: hidden;
+}
+#login-screen::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: 
+    radial-gradient(circle at 15% 85%, rgba(255,200,150,.07) 0%, transparent 50%),
+    radial-gradient(circle at 85% 15%, rgba(255,180,120,.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+.login-ornament {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+}
+.login-box {
+  width: 400px; padding: 48px 44px;
+  background: #fff; border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.35), 0 0 0 1px rgba(245,201,122,.2);
+  position: relative; z-index: 1;
+}
+.login-logo {
+  font-family: var(--serif); font-size: 32px; color: var(--maroon);
+  margin-bottom: 4px; letter-spacing: -.5px;
+}
+.login-logo span { font-style: italic; }
+.login-sub { color: var(--text3); font-size: 13px; margin-bottom: 36px; }
+.field { margin-bottom: 20px; }
+.field label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 6px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+.field input {
+  width: 100%; padding: 12px 14px;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 10px; color: var(--text); font-family: var(--sans); font-size: 14px;
+  transition: border-color .2s, background .2s;
+}
+.field input:focus { outline: none; border-color: var(--maroon); background: #fff; }
+.btn-primary {
+  width: 100%; padding: 13px; background: var(--maroon);
+  border: none; border-radius: 10px; color: #fff;
+  font-family: var(--sans); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background .2s; letter-spacing: .02em;
+}
+.btn-primary:hover { background: var(--maroon2); }
+.error-msg { color: var(--danger); font-size: 12px; margin-top: 12px; text-align: center; display: none; }
+
+/* APP */
+#app-screen { display: none; min-height: 100vh; flex-direction: column; }
+
+/* NAV */
+nav {
+  height: 60px; background: var(--maroon);
+  display: flex; align-items: center; padding: 0 28px;
+  gap: 16px; position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 8px rgba(107,26,26,.3);
+}
+.nav-logo { font-family: var(--serif); font-size: 22px; color: #fff; letter-spacing: -.3px; }
+.nav-logo span { font-style: italic; opacity: .85; }
+.nav-spacer { flex: 1; }
+.nav-user { font-size: 13px; color: rgba(255,255,255,.75); }
+.nav-logout {
+  font-size: 12px; color: rgba(255,255,255,.7); cursor: pointer;
+  padding: 5px 12px; border: 1px solid rgba(255,255,255,.3);
+  border-radius: 6px; transition: all .2s;
+}
+.nav-logout:hover { color: #fff; border-color: rgba(255,255,255,.7); }
+
+/* LAYOUT */
+.layout { display: grid; grid-template-columns: 240px 1fr; flex: 1; height: calc(100vh - 60px); overflow: hidden; }
+aside { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 24px 0; }
+.sidebar-section { padding: 8px 20px 4px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); font-weight: 600; }
+.sidebar-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; font-size: 13px; color: var(--text2);
+  cursor: pointer; transition: all .15s; border-left: 3px solid transparent;
+  margin: 2px 0;
+}
+.sidebar-item:hover { background: var(--maroon-pale); color: var(--maroon); }
+.sidebar-item.active { background: var(--maroon-light); color: var(--maroon); border-left-color: var(--maroon); font-weight: 500; }
+
+main { overflow-y: auto; padding: 36px; background: var(--bg); }
+
+/* PANEL */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 24px; box-shadow: var(--shadow); }
+.panel-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.panel-title { font-size: 15px; font-weight: 600; color: var(--maroon); }
+.panel-body { padding: 24px; }
+
+/* STATS */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
+.stat-val { font-size: 30px; font-weight: 700; font-family: var(--mono); color: var(--maroon); }
+.stat-label { font-size: 12px; color: var(--text3); margin-top: 4px; font-weight: 500; }
+
+/* DOC CARDS */
+.doc-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 14px 18px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 14px; cursor: pointer;
+  transition: all .2s; box-shadow: var(--shadow);
+}
+.doc-card:hover { border-color: var(--maroon); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+.doc-icon { width: 42px; height: 42px; background: var(--maroon-light); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.doc-info { flex: 1; min-width: 0; }
+.doc-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.badge { font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; letter-spacing: .05em; text-transform: uppercase; flex-shrink: 0; }
+.badge-draft { background: #f0ebe8; color: var(--text3); }
+.badge-signed { background: var(--success-bg); color: var(--success); }
+.badge-locked { background: var(--warn-bg); color: var(--warn); }
+.badge-cosign { background: var(--maroon-light); color: var(--maroon); }
+
+/* UPLOAD */
+.upload-zone {
+  border: 2px dashed var(--border); border-radius: 14px; padding: 56px 24px;
+  text-align: center; cursor: pointer; transition: all .2s;
+  background: var(--surface2);
+}
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--maroon); background: var(--maroon-pale); }
+.upload-zone svg { width: 48px; height: 48px; color: var(--maroon); opacity: .4; margin-bottom: 14px; }
+.upload-zone h3 { font-size: 16px; margin-bottom: 6px; color: var(--text); }
+.upload-zone p { font-size: 13px; color: var(--text3); }
+#file-input { display: none; }
+
+/* EDITOR */
+#sign-editor { display: none; }
+.editor-grid { display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
+.pdf-canvas-wrap { background: #e8ddd8; border-radius: 10px; overflow: hidden; position: relative; min-height: 400px; border: 1px solid var(--border); }
+#pdf-preview-img { width: 100%; display: block; }
+.overlay-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.drag-element {
+  position: absolute; border: 2px solid var(--maroon); border-radius: 6px;
+  cursor: move; pointer-events: all; background: rgba(107,26,26,.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--maroon); font-weight: 700;
+  user-select: none;
+}
+.drag-element.qr-drag { border-color: #2d6a4f; color: #2d6a4f; background: rgba(45,106,79,.1); }
+.resize-handle { position: absolute; bottom: 2px; right: 2px; width: 10px; height: 10px; cursor: se-resize; background: var(--maroon); border-radius: 2px; }
+.drag-element.qr-drag .resize-handle { background: #2d6a4f; }
+
+/* CONTROLS */
+.ctrl-section { margin-bottom: 18px; }
+.ctrl-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: 8px; font-weight: 700; }
+.ctrl-row { display: flex; gap: 8px; margin-bottom: 6px; }
+.ctrl-input { flex: 1; padding: 7px 10px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; font-family: var(--mono); }
+.ctrl-input:focus { outline: none; border-color: var(--maroon); }
+.ctrl-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; }
+.ctrl-toggle input[type=checkbox] { accent-color: var(--maroon); width: 14px; height: 14px; }
+.ctrl-toggle span { font-size: 13px; color: var(--text2); }
+.page-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.page-btn { padding: 6px 12px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 6px; color: var(--text); cursor: pointer; font-size: 12px; transition: all .2s; }
+.page-btn:hover { border-color: var(--maroon); color: var(--maroon); }
+.page-info { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+
+.btn-sign { width: 100%; padding: 13px; background: var(--maroon); border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s; margin-top: 8px; }
+.btn-sign:hover { background: var(--maroon2); }
+.btn-sign:disabled { opacity: .45; cursor: not-allowed; }
+.btn-secondary { padding: 8px 16px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 13px; cursor: pointer; transition: all .2s; }
+.btn-secondary:hover { border-color: var(--maroon); color: var(--maroon); }
+
+/* TOAST */
+.toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; max-width: 320px; animation: toastIn .25s ease; box-shadow: var(--shadow-lg); }
+.toast-success { background: #f0f7f4; color: #2d6a4f; border: 1px solid #a7d4bc; }
+.toast-error   { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+.toast-info    { background: var(--maroon-light); color: var(--maroon); border: 1px solid #e8b4b4; }
+@keyframes toastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state { text-align: center; padding: 60px 24px; color: var(--text3); }
+.empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: .25; }
+
+h2.page-title { font-family: var(--serif); font-size: 26px; margin-bottom: 28px; color: var(--maroon); font-weight: 600; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  aside { 
+    display: flex; flex-direction: row; overflow-x: auto;
+    height: auto; border-right: none; border-bottom: 1px solid var(--border);
+    padding: 8px 0;
+  }
+  .sidebar-section { display: none; }
+  .sidebar-item { 
+    padding: 8px 14px; white-space: nowrap; border-left: none;
+    border-bottom: 3px solid transparent; flex-shrink: 0;
+  }
+  .sidebar-item.active { border-bottom-color: var(--maroon); border-left: none; }
+  main { padding: 16px; }
+  .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-card { padding: 14px; }
+  .stat-val { font-size: 22px; }
+  .editor-grid { grid-template-columns: 1fr; }
+  .panel-body { padding: 16px; }
+  h2.page-title { font-size: 20px; margin-bottom: 16px; }
+  .doc-card { padding: 12px 14px; }
+  .doc-name { font-size: 13px; }
+  nav { padding: 0 16px; }
+  .nav-logo { font-size: 18px; }
+}
+
+@media (max-width: 480px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .ctrl-row { flex-direction: column; gap: 4px; }
+  .layout { height: auto; }
+  main { min-height: calc(100vh - 120px); }
+}
+@media (max-width: 600px) {
+  .doc-name { max-width: 100%; }
+}
+
+/* Fix overflow */
+.doc-card { overflow: hidden; }
+.doc-name { max-width: 60vw; }
+main { overflow-x: hidden; overflow-y: auto; }
+.panel { overflow: visible; }
+.editor-grid > div:last-child { min-width: 0; overflow: hidden; }
+.ctrl-input { width: 100%; min-width: 0; }
+.ctrl-row { flex-wrap: wrap; }
+.ctrl-row > div { min-width: 0; flex: 1 1 80px; }
+
+/* Better controls UI */
+.ctrl-section { 
+  background: var(--surface2); border-radius: 10px; 
+  padding: 12px 14px; margin-bottom: 12px; 
+  border: 1px solid var(--border);
+}
+.ctrl-label { 
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em; 
+  color: var(--maroon); margin-bottom: 8px; font-weight: 700; 
+  display: flex; align-items: center; gap: 4px;
+}
+.ctrl-input { 
+  width: 100%; padding: 8px 10px; 
+  background: var(--surface); border: 1.5px solid var(--border); 
+  border-radius: 8px; color: var(--text); font-size: 13px; 
+  font-family: var(--mono); transition: border-color .2s;
+}
+.ctrl-input:focus { border-color: var(--maroon); outline: none; }
+.ctrl-toggle { 
+  display: flex; align-items: center; gap: 10px; 
+  padding: 8px 0; cursor: pointer; 
+  border-bottom: 1px solid var(--border);
+}
+.ctrl-toggle:last-child { border-bottom: none; padding-bottom: 0; }
+.ctrl-toggle span { font-size: 13px; color: var(--text); }
+
+/* Scrollable controls on mobile */
+@media (max-width: 768px) {
+  .editor-grid > div:last-child {
+    max-height: none;
+    overflow-y: visible;
+  }
+  .btn-sign { position: sticky; bottom: 0; z-index: 10; box-shadow: 0 -4px 12px rgba(107,26,26,.15); }
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <!-- Ornamen Batik -->
+  <div class="login-ornament">
+    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;opacity:0.13;">
+      <defs>
+        <pattern id="batik1" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
+          <!-- Diamond center -->
+          <polygon points="40,8 72,40 40,72 8,40" fill="none" stroke="#f5c97a" stroke-width="0.8"/>
+          <polygon points="40,18 62,40 40,62 18,40" fill="none" stroke="#f5c97a" stroke-width="0.5"/>
+          <!-- Corner florals -->
+          <circle cx="40" cy="40" r="5" fill="none" stroke="#f5c97a" stroke-width="0.8"/>
+          <circle cx="40" cy="40" r="2.5" fill="#f5c97a"/>
+          <!-- Petal motifs -->
+          <path d="M40,8 Q45,20 40,25 Q35,20 40,8" fill="none" stroke="#e8a855" stroke-width="0.6"/>
+          <path d="M40,55 Q45,60 40,72 Q35,60 40,55" fill="none" stroke="#e8a855" stroke-width="0.6"/>
+          <path d="M8,40 Q20,45 25,40 Q20,35 8,40" fill="none" stroke="#e8a855" stroke-width="0.6"/>
+          <path d="M55,40 Q60,45 72,40 Q60,35 55,40" fill="none" stroke="#e8a855" stroke-width="0.6"/>
+          <!-- Corner dots -->
+          <circle cx="0" cy="0" r="2" fill="#f5c97a"/>
+          <circle cx="80" cy="0" r="2" fill="#f5c97a"/>
+          <circle cx="0" cy="80" r="2" fill="#f5c97a"/>
+          <circle cx="80" cy="80" r="2" fill="#f5c97a"/>
+          <!-- Diagonal lines -->
+          <line x1="0" y1="0" x2="80" y2="80" stroke="#c8813a" stroke-width="0.3"/>
+          <line x1="80" y1="0" x2="0" y2="80" stroke="#c8813a" stroke-width="0.3"/>
+        </pattern>
+        <pattern id="batik2" x="40" y="40" width="80" height="80" patternUnits="userSpaceOnUse">
+          <!-- Secondary layer - smaller motifs -->
+          <circle cx="40" cy="40" r="12" fill="none" stroke="#f5c97a" stroke-width="0.4"/>
+          <circle cx="40" cy="40" r="8" fill="none" stroke="#e8a855" stroke-width="0.3"/>
+          <!-- Leaf pattern -->
+          <path d="M40,28 C44,32 44,36 40,40 C36,36 36,32 40,28" fill="none" stroke="#f5c97a" stroke-width="0.5"/>
+          <path d="M40,40 C44,44 44,48 40,52 C36,48 36,44 40,40" fill="none" stroke="#f5c97a" stroke-width="0.5"/>
+          <path d="M28,40 C32,44 36,44 40,40 C36,36 32,36 28,40" fill="none" stroke="#f5c97a" stroke-width="0.5"/>
+          <path d="M40,40 C44,44 48,44 52,40 C48,36 44,36 40,40" fill="none" stroke="#f5c97a" stroke-width="0.5"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#batik1)"/>
+      <rect width="100%" height="100%" fill="url(#batik2)" opacity="0.5"/>
+    </svg>
+  </div>
+  <div class="login-box">
+    <div class="login-logo">In<span>AR</span>Sign</div>
+    <div class="login-sub">Sistem Tanda Tangan Digital Pribadi</div>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="login-user" autocomplete="username" placeholder="username">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-pass" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <button class="btn-primary" id="login-btn">Masuk</button>
+    <div class="error-msg" id="login-err">Username atau password salah</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+  <nav>
+    <div class="nav-logo">In<span>AR</span>Sign</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-user" id="nav-user-name"></div>
+    <div class="nav-logout" onclick="logout()">Keluar</div>
+  </nav>
+  <div class="layout">
+    <aside>
+      <div class="sidebar-section">Menu</div>
+      <div class="sidebar-item active" onclick="showSection('dashboard')" id="nav-dashboard">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+        Dashboard
+      </div>
+      <div class="sidebar-item" onclick="showSection('upload')" id="nav-upload">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        Upload & Tanda Tangani
+      </div>
+      <div class="sidebar-item" onclick="showSection('documents')" id="nav-documents">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Dokumen Saya
+      </div>
+      <div class="sidebar-item" onclick="showSection('profiles')" id="nav-profiles">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        Profil Tanda Tangan
+      </div>
+    </aside>
+    <main>
+      <!-- DASHBOARD -->
+      <div id="section-dashboard">
+        <h2 class="page-title">Selamat datang, <span id="welcome-name"></span></h2>
+        <div class="stats">
+          <div class="stat-card"><div class="stat-val" id="stat-total">—</div><div class="stat-label">Total Dokumen</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-signed">—</div><div class="stat-label">Ditandatangani</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-locked">—</div><div class="stat-label">Dikunci</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-cosign">—</div><div class="stat-label">Co-Sign</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">Dokumen Terbaru</div></div>
+          <div class="panel-body" id="recent-docs">
+            <div class="empty-state"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><p>Belum ada dokumen</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- UPLOAD -->
+      <div id="section-upload" style="display:none">
+        <h2 class="page-title">Upload &amp; Tanda Tangani</h2>
+
+        <!-- STEP 1: UPLOAD -->
+        <div id="step-upload" class="panel" style="display:block">
+          <div class="panel-header"><div class="panel-title">① Pilih File PDF</div></div>
+          <div class="panel-body">
+            <div id="upload-zone" style="border:2px dashed #e8ddd8;border-radius:14px;padding:56px 24px;text-align:center;cursor:pointer;background:#f5f0ee;transition:all .2s;">
+              <div style="font-size:48px;margin-bottom:12px;opacity:.4;color:#6b1a1a;">↑</div>
+              <h3 style="font-size:16px;margin-bottom:6px;">Drag &amp; drop PDF di sini</h3>
+              <p style="font-size:13px;color:#a08080;">atau klik untuk pilih file · maksimal 50MB</p>
+              <input type="file" id="file-input" accept=".pdf" style="display:none">
+            </div>
+            <div id="upload-status" style="display:none;padding:16px;text-align:center;color:#6b4a4a;"></div>
+          </div>
+        </div>
+
+        <!-- STEP 2: EDITOR -->
+        <div id="sign-editor" class="panel" style="display:none">
+          <div class="panel-header">
+            <div class="panel-title">② Atur Posisi Tanda Tangan &amp; QR Code</div>
+            <button class="btn-secondary" onclick="resetEditor()">← Ganti File</button>
+          </div>
+          <div class="panel-body">
+            <div class="editor-grid">
+              <!-- PDF Preview -->
+              <div>
+                <div class="page-nav">
+                  <button class="page-btn" onclick="changePage(-1)">◀</button>
+                  <span class="page-info" id="page-label">Halaman 1 / 1</span>
+                  <button class="page-btn" onclick="changePage(1)">▶</button>
+                </div>
+                <div id="pdf-wrap" style="background:#e8ddd8;border-radius:10px;overflow:hidden;position:relative;min-height:400px;border:1px solid #e8ddd8;">
+                  <canvas id="pdf-canvas" style="width:100%;display:block;"></canvas>
+                  <div id="overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">
+                    <div id="sig-drag" style="position:absolute;border:2px solid #6b1a1a;border-radius:6px;cursor:move;pointer-events:all;background:rgba(107,26,26,.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:#6b1a1a;font-weight:700;user-select:none;left:5%;top:75%;width:30%;height:8%;">
+                      Tanda Tangan
+                      <div id="sig-resize" style="position:absolute;bottom:2px;right:2px;width:10px;height:10px;cursor:se-resize;background:#6b1a1a;border-radius:2px;"></div>
+                    </div>
+                    <div id="qr-drag" style="position:absolute;border:2px solid #2d6a4f;border-radius:6px;cursor:move;pointer-events:all;background:rgba(45,106,79,.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:#2d6a4f;font-weight:700;user-select:none;left:75%;top:72%;width:15%;height:15%;">
+                      QR Code
+                      <div id="qr-resize" style="position:absolute;bottom:2px;right:2px;width:10px;height:10px;cursor:se-resize;background:#2d6a4f;border-radius:2px;"></div>
+                    </div>
+                    <!-- Co-signer elements - hidden by default -->
+                    <div id="cosig-drag" style="display:none;position:absolute;border:2px dashed #1d4ed8;border-radius:6px;cursor:move;pointer-events:all;background:rgba(29,78,216,.1);align-items:center;justify-content:center;font-size:10px;color:#1d4ed8;font-weight:700;user-select:none;left:5%;top:55%;width:30%;height:8%;">
+                      Co-Signer
+                      <div id="cosig-resize" style="position:absolute;bottom:2px;right:2px;width:10px;height:10px;cursor:se-resize;background:#1d4ed8;border-radius:2px;"></div>
+                    </div>
+                    <div id="cosig-qr-drag" style="display:none;position:absolute;border:2px dashed #7c3aed;border-radius:6px;cursor:move;pointer-events:all;background:rgba(124,58,237,.1);align-items:center;justify-content:center;font-size:10px;color:#7c3aed;font-weight:700;user-select:none;left:55%;top:52%;width:15%;height:15%;">
+                      QR Co-Sign
+                      <div id="cosig-qr-resize" style="position:absolute;bottom:2px;right:2px;width:10px;height:10px;cursor:se-resize;background:#7c3aed;border-radius:2px;"></div>
+                    </div>
+                  </div>
+                </div>
+                <p style="font-size:11px;color:#a08080;margin-top:8px;text-align:center;">Geser elemen untuk atur posisi · Tarik sudut kanan bawah untuk resize</p>
+              </div>
+              <!-- Controls -->
+              <div>
+                <div class="ctrl-section">
+                  <div class="ctrl-label">Halaman Tanda Tangan</div>
+                  <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Pilih satu atau lebih halaman</div>
+                  <div id="page-selector" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:4px 0;">
+                    <!-- Diisi otomatis saat PDF dimuat -->
+                  </div>
+                  <input type="hidden" id="ctrl-page" value="1">
+                </div>
+                <div class="ctrl-section">
+                  <div class="ctrl-label">Opsi Tampilan</div>
+                  <label class="ctrl-toggle"><input type="checkbox" id="opt-show-sig" checked onchange="toggleSigBlock(this.checked)"><span>Tampilkan blok tanda tangan</span></label>
+                </div>
+                <div class="ctrl-section">
+                  <div class="ctrl-label">Opsi Keamanan</div>
+                  <label class="ctrl-toggle"><input type="checkbox" id="opt-lock"><span>Kunci dokumen setelah sign</span></label>
+                  <label class="ctrl-toggle"><input type="checkbox" id="opt-cosign" onchange="toggleCosignExpiry(this.checked)"><span>Izinkan co-sign pihak lain</span></label>
+                  <div id="cosign-expiry-row" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+                    <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:6px;">Berlaku berapa jam?</label>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <input type="number" id="cosign-hours" value="24" min="1" max="168" style="width:80px;padding:8px 10px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);">
+                      <span style="font-size:12px;color:var(--text2);">jam (maks. 168)</span>
+                    </div>
+                  </div>
+                  <div id="cosign-pos-section" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+                    <div style="font-size:10px;color:#1d4ed8;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Posisi Co-Signer di PDF</div>
+                    <div style="font-size:11px;color:var(--text3);">Geser elemen biru & ungu di preview</div>
+                    <label class="ctrl-toggle" style="margin-top:8px;">
+                      <input type="checkbox" id="cosign-show-sig" checked onchange="toggleCosignSigBlock(this.checked)">
+                      <span style="font-size:12px;">Tampilkan blok tanda tangan co-signer</span>
+                    </label>
+                  </div>
+                </div>
+                <!-- Hidden inputs untuk posisi - diupdate otomatis oleh drag-drop -->
+                <input type="hidden" id="sig-x">
+                <input type="hidden" id="sig-y">
+                <input type="hidden" id="sig-w">
+                <input type="hidden" id="sig-h">
+                <input type="hidden" id="qr-x">
+                <input type="hidden" id="qr-y">
+                <input type="hidden" id="qr-size">
+                <div class="ctrl-section">
+                  <div class="ctrl-label">Profil Tanda Tangan</div>
+                  <select class="ctrl-input" id="sign-profile" onchange="onProfileChange()" style="width:100%;cursor:pointer;">
+                    <option value="">-- Pilih Profil --</option>
+                  </select>
+                  <div style="font-size:11px;color:var(--text3);margin-top:4px;">
+                    <a href="#" onclick="showSection('profiles');return false;" style="color:var(--maroon);text-decoration:none;">+ Kelola profil</a>
+                  </div>
+                  <div id="profile-preview" style="display:none;margin-top:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px;">
+                    <div id="pp-name" style="font-weight:600;color:var(--text);"></div>
+                    <div id="pp-jabatan" style="color:var(--text2);margin-top:2px;"></div>
+                    <div id="pp-email" style="color:var(--text3);margin-top:1px;"></div>
+                  </div>
+                  <!-- Cosign position section -->
+                  <div id="cosign-pos-section" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+                    <div style="font-size:11px;color:#1d4ed8;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Posisi Co-Signer</div>
+                    <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Geser elemen biru di preview untuk atur posisi</div>
+                    <label class="ctrl-toggle">
+                      <input type="checkbox" id="cosign-show-sig" checked onchange="toggleCosignSigBlock(this.checked)">
+                      <span style="font-size:12px;">Tampilkan blok tanda tangan co-signer</span>
+                    </label>
+                  </div>
+                </div>
+                <input type="hidden" id="cosig-x">
+                <input type="hidden" id="cosig-y">
+                <input type="hidden" id="cosig-w">
+                <input type="hidden" id="cosig-h">
+                <input type="hidden" id="cosig-qr-x">
+                <input type="hidden" id="cosig-qr-y">
+                <input type="hidden" id="cosig-qr-size">
+                <input type="hidden" id="sign-jabatan">
+                <input type="hidden" id="sign-email-custom">
+                <div class="ctrl-section">
+                  <div class="ctrl-label">Alasan / Reason <span style="color:var(--danger)">*</span></div>
+                  <input class="ctrl-input" type="text" id="sign-reason" placeholder="cth: Menyetujui proposal, Sebagai pembimbing..." style="width:100%">
+                  <div style="font-size:11px;color:var(--text3);margin-top:4px;">Wajib diisi sebelum tanda tangan</div>
+                </div>
+                <button class="btn-sign" id="btn-do-sign" onclick="doSign()">Tanda Tangani Sekarang</button>
+                <div id="sign-result" style="margin-top:16px;display:none;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOCUMENTS -->
+      <div id="section-documents" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+          <h2 class="page-title" style="margin-bottom:0">Dokumen Saya</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <!-- Search -->
+            <div style="position:relative;">
+              <input type="text" id="doc-search" placeholder="Cari dokumen..." 
+                oninput="filterDocs()"
+                style="padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text);width:200px;transition:border-color .2s;"
+                onfocus="this.style.borderColor='var(--maroon)'" 
+                onblur="this.style.borderColor='var(--border)'">
+              <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text3);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <!-- Filter -->
+            <select id="doc-filter" onchange="filterDocs()"
+              style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);color:var(--text);cursor:pointer;">
+              <option value="">Semua Status</option>
+              <option value="draft">Draft</option>
+              <option value="signed">Signed</option>
+              <option value="locked">Locked</option>
+              <option value="cosign_open">Co-Sign</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Doc count -->
+        <div id="doc-count" style="font-size:13px;color:var(--text3);margin-bottom:16px;"></div>
+
+        <!-- Grouped list -->
+        <div id="all-docs-list"></div>
+      </div>
+          <!-- PROFILES -->
+      <div id="section-profiles" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+          <h2 class="page-title" style="margin-bottom:0">Profil Tanda Tangan</h2>
+          <button onclick="showProfileForm()" style="padding:10px 18px;background:var(--maroon);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">+ Tambah Profil</button>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:20px;">Buat beberapa profil dengan identitas berbeda. Saat tanda tangan, pilih profil yang sesuai.</p>
+        
+        <!-- Profile Form -->
+        <div id="profile-form" class="panel" style="display:none;margin-bottom:20px;">
+          <div class="panel-header"><div class="panel-title" id="profile-form-title">Tambah Profil Baru</div></div>
+          <div class="panel-body">
+            <input type="hidden" id="edit-profile-id">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);display:block;margin-bottom:6px;">Nama Profil <span style="color:var(--danger)">*</span></label>
+                <input class="ctrl-input" type="text" id="pf-name" placeholder="cth: Akademik, Profesional, Pribadi" style="width:100%">
+                <div style="font-size:11px;color:var(--text3);margin-top:4px;">Label untuk memilih profil saat tanda tangan</div>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);display:block;margin-bottom:6px;">Nama Tampil <span style="color:var(--danger)">*</span></label>
+                <input class="ctrl-input" type="text" id="pf-display" placeholder="cth: Dr. Indra Aulia, S.T., M.Kom." style="width:100%">
+                <div style="font-size:11px;color:var(--text3);margin-top:4px;">Nama yang muncul di dokumen & halaman verifikasi</div>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);display:block;margin-bottom:6px;">Jabatan</label>
+                <input class="ctrl-input" type="text" id="pf-jabatan" placeholder="cth: Dosen Pembimbing, Direktur..." style="width:100%">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);display:block;margin-bottom:6px;">Email</label>
+                <input class="ctrl-input" type="email" id="pf-email" placeholder="email@domain.com" style="width:100%">
+              </div>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;">
+              <input type="checkbox" id="pf-default" style="accent-color:var(--maroon);width:14px;height:14px;">
+              <span style="font-size:13px;color:var(--text2);">Jadikan profil default</span>
+            </label>
+            <div style="display:flex;gap:10px;">
+              <button onclick="saveProfile()" style="padding:10px 20px;background:var(--maroon);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Simpan</button>
+              <button onclick="cancelProfileForm()" style="padding:10px 16px;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;color:var(--text2);">Batal</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Profile List -->
+        <div id="profiles-list"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:7px;background:var(--surface);border-top:1px solid var(--border);font-size:11px;color:var(--text3);z-index:50;letter-spacing:.02em;">
+  &copy; 2026 <strong style="color:var(--maroon)">Indra Aulia</strong> &nbsp;&middot;&nbsp; InARSign &nbsp;&middot;&nbsp; Sistem Tanda Tangan Digital Pribadi
+</div>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+let TOKEN = localStorage.getItem('esign_token') || '';
+let currentDocId = null, currentPages = [], currentPage = 1, previewImages = {};
+const positions = { sig: {x:5,y:75,w:30,h:8}, qr: {x:75,y:72,w:15,h:15}, cosig: {x:5,y:55,w:30,h:8}, cosig_qr: {x:55,y:52,w:15,h:15} };
+
+async function tryAutoLogin() {
+  if (!TOKEN) return;
+  try { const r = await api('/api/auth/me'); showApp(r.name); } 
+  catch { TOKEN=''; localStorage.removeItem('esign_token'); }
+}
+
+document.getElementById('login-btn').onclick = async () => {
+  const u = document.getElementById('login-user').value;
+  const p = document.getElementById('login-pass').value;
+  try {
+    const r = await fetch('/api/auth/login', { method:'POST', body: new URLSearchParams({username:u,password:p}) });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    TOKEN = data.access_token;
+    localStorage.setItem('esign_token', TOKEN);
+    showApp(data.name);
+  } catch { document.getElementById('login-err').style.display='block'; }
+};
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-btn').click(); });
+
+function showApp(name) {
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-screen').style.display='flex';
+  document.getElementById('nav-user-name').textContent=name;
+  document.getElementById('welcome-name').textContent=name.split(' ')[0];
+  loadDashboard();
+  loadProfiles();
+  setTimeout(initUpload, 100);
+}
+function logout() { TOKEN=''; localStorage.removeItem('esign_token'); location.reload(); }
+
+async function api(path, opts={}) {
+  const res = await fetch(path, {...opts, headers:{'Authorization':'Bearer '+TOKEN,...(opts.headers||{})}});
+  if (res.status === 401) {
+    TOKEN=''; localStorage.removeItem('esign_token');
+    document.getElementById('app-screen').style.display='none';
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('login-err').textContent='Sesi habis, silakan login kembali.';
+    document.getElementById('login-err').style.display='block';
+    throw new Error('Session expired');
+  }
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail||'Error'); }
+  return res.json();
+}
+
+function showSection(name) {
+  // Konfirmasi jika sedang di editor dan mau pindah
+  if (name !== 'upload' && currentDocId) {
+    const editorVisible = document.getElementById('sign-editor').style.display !== 'none';
+    if (editorVisible) {
+      if (!confirm('Anda sedang mengatur tanda tangan. Yakin ingin meninggalkan halaman ini?')) return;
+      // Reset editor state
+      resetEditor();
+    }
+  }
+
+  ['dashboard','upload','documents','profiles'].forEach(s => {
+    document.getElementById('section-'+s).style.display = s===name ? '' : 'none';
+    document.getElementById('nav-'+s).classList.toggle('active', s===name);
+  });
+  if (name==='documents') loadAllDocs();
+  if (name==='dashboard') loadDashboard();
+  if (name==='profiles') loadProfiles();
+  if (name==='upload') {
+    // Kalau tidak sedang edit, tampilkan upload zone
+    if (!currentDocId) {
+      document.getElementById('step-upload').style.display='block';
+      document.getElementById('sign-editor').style.display='none';
+    }
+  }
+}
+
+async function loadDashboard() {
+  try {
+    const docs = await api('/api/documents');
+    document.getElementById('stat-total').textContent = docs.length;
+    document.getElementById('stat-signed').textContent = docs.filter(d=>d.status==='signed'||d.status==='locked').length;
+    document.getElementById('stat-locked').textContent = docs.filter(d=>d.status==='locked').length;
+    document.getElementById('stat-cosign').textContent = docs.filter(d=>d.status==='cosign_open').length;
+    renderDocList(docs.slice(0,5), 'recent-docs');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function statusLabel(s) { return {draft:'Draft',signed:'Signed',locked:'Locked',cosign_open:'Co-Sign'}[s]||s; }
+
+async function editDraft(docId, e) {
+  e.stopPropagation();
+  currentDocId = docId;
+  previewImages = {};
+  pdfDoc = null;
+
+  showSection('upload');
+  document.getElementById('step-upload').style.display = 'none';
+  document.getElementById('sign-editor').style.display = 'block';
+
+  try {
+    await loadPdfJs(docId);
+    const totalPages = pdfDoc ? pdfDoc.numPages : 1;
+    currentPages = Array.from({length: totalPages}, (_, i) => ({page: i+1}));
+    document.getElementById('ctrl-page').max = totalPages;
+    document.getElementById('page-label').textContent = 'Halaman 1 / ' + totalPages;
+    initDraggables();
+    toast('Draft dimuat — atur posisi dan tanda tangani', 'info');
+  } catch(err) {
+    toast('Gagal load PDF: ' + err.message, 'error');
+  }
+}
+
+async function viewCosignLinks(docId, e) {
+  e.stopPropagation();
+  try {
+    // Generate fresh link so user can copy
+    const hours = 24;
+    const fd = new FormData();
+    fd.append('expire_hours', hours);
+    const res = await fetch('/api/documents/'+docId+'/cosign-link', {
+      method: 'POST', headers: {'Authorization': 'Bearer '+TOKEN}, body: fd
+    });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail); }
+    const data = await res.json();
+    await navigator.clipboard.writeText(data.cosign_url).catch(()=>{});
+    prompt('Link Co-Sign (berlaku 24 jam) — sudah disalin ke clipboard:', data.cosign_url);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function generateCosignLink(docId, e) {
+  e.stopPropagation();
+  try {
+    const r = await fetch('/api/documents/'+docId+'/cosign-link', {
+      headers: {'Authorization': 'Bearer '+TOKEN}
+    });
+    if (r.ok) {
+      const d = await r.json();
+      if (d.has_link) {
+        prompt('Link Co-Sign (sisa '+d.hours_left+' jam):', d.cosign_url);
+        return;
+      }
+    }
+    toast('Belum ada link. Tanda tangani dengan co-sign aktif dulu.', 'info');
+  } catch(e) { toast(String(e.message), 'error'); }
+}
+
+async function deleteDoc(docId, status, e) {
+  e.stopPropagation();
+  const msg = status === 'draft' ? 'Hapus dokumen draft ini?' : 
+              status === 'locked' ? 'Dokumen ini dikunci. Yakin ingin menghapus?' :
+              'Hapus dokumen yang sudah ditandatangani ini?';
+  if (!confirm(msg)) return;
+  try {
+    const res = await fetch('/api/documents/'+docId, {method:'DELETE', headers:{'Authorization':'Bearer '+TOKEN}});
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail||'Gagal menghapus'); }
+    toast('Dokumen berhasil dihapus','success');
+    loadAllDocs(); loadDashboard();
+  } catch(err) { toast(err.message,'error'); }
+}
+
+function renderDocList(docs, containerId) {
+  const el = document.getElementById(containerId);
+  if (!docs.length) { el.innerHTML='<div class="empty-state"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><p>Belum ada dokumen</p></div>'; return; }
+  el.innerHTML = docs.map(d=>`
+    <div class="doc-card" onclick="handleDocClick('${d.doc_id}','${d.status}')">
+      <div class="doc-icon"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--maroon)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
+      <div class="doc-info"><div class="doc-name">${d.filename}</div><div class="doc-meta">${d.signature_count} tanda tangan · ${new Date(d.created_at).toLocaleDateString('id-ID')}</div></div>
+      <span class="badge badge-${d.status==='cosign_open'?'cosign':d.status}">${statusLabel(d.status)}</span>
+      ${d.status==='draft' ? `<button onclick="editDraft('${d.doc_id}', event)" style="margin-left:8px;padding:5px 10px;background:var(--maroon-light);border:1px solid #e8b4b4;border-radius:6px;color:var(--maroon);font-size:11px;cursor:pointer;font-weight:600;">Edit</button>` : ''}
+      <button onclick="deleteDoc('${d.doc_id}', '${d.status}', event)" style="margin-left:8px;padding:5px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;color:#991b1b;font-size:11px;cursor:pointer;font-weight:600;">Hapus</button>
+    </div>`).join('');
+}
+
+function handleDocClick(docId, status) {
+  if (status === 'signed' || status === 'locked' || status === 'cosign_open') {
+    downloadPdf(docId);
+  }
+}
+
+let allDocsCache = [];
+
+async function loadAllDocs() {
+  try {
+    allDocsCache = await api('/api/documents');
+    filterDocs();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function filterDocs() {
+  const search = (document.getElementById('doc-search')?.value || '').toLowerCase();
+  const filter = document.getElementById('doc-filter')?.value || '';
+  
+  let docs = allDocsCache;
+  if (search) docs = docs.filter(d => d.filename.toLowerCase().includes(search));
+  if (filter) docs = docs.filter(d => d.status === filter);
+  
+  renderGroupedDocs(docs);
+}
+
+function renderGroupedDocs(docs) {
+  const container = document.getElementById('all-docs-list');
+  const countEl = document.getElementById('doc-count');
+  
+  if (!docs.length) {
+    countEl.textContent = '';
+    container.innerHTML = `<div class="empty-state">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <p>Tidak ada dokumen ditemukan</p>
+    </div>`;
+    return;
+  }
+
+  countEl.textContent = docs.length + ' dokumen ditemukan';
+
+  // Group by month-year
+  const groups = {};
+  docs.forEach(d => {
+    const date = new Date(d.created_at);
+    const key = date.toLocaleDateString('id-ID', {month:'long', year:'numeric'});
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(d);
+  });
+
+  container.innerHTML = Object.entries(groups).map(([month, items]) => `
+    <div style="margin-bottom:24px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:0 4px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+        <span>${month}</span>
+        <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:1px 8px;font-size:10px;">${items.length}</span>
+      </div>
+      <div class="panel" style="padding:0;overflow:hidden;">
+        ${items.map((d, i) => `
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;transition:background .15s;border-bottom:${i < items.length-1 ? '1px solid var(--border)' : 'none'};"
+            onmouseover="this.style.background='var(--surface2)'"
+            onmouseout="this.style.background=''"
+            onclick="handleDocClick('${d.doc_id}','${d.status}')">
+            <!-- Icon -->
+            <div style="width:40px;height:40px;background:var(--maroon-light);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--maroon)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            </div>
+            <!-- Info -->
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.filename}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;">
+                ${d.signature_count} tanda tangan &nbsp;·&nbsp; 
+                ${new Date(d.created_at).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'})}
+                ${d.signed_at ? ' &nbsp;·&nbsp; Ditandatangani ' + new Date(d.signed_at).toLocaleDateString('id-ID',{day:'numeric',month:'short'}) : ''}
+              </div>
+            </div>
+            <!-- Status badge -->
+            <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase;flex-shrink:0;${statusStyle(d.status)}">${statusLabel(d.status)}</span>
+            <!-- Actions -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;" onclick="event.stopPropagation()">
+              ${d.status==='draft' ? `<button onclick="editDraft('${d.doc_id}',event)" style="padding:5px 10px;background:var(--maroon-light);border:1px solid #e8b4b4;border-radius:6px;color:var(--maroon);font-size:11px;cursor:pointer;font-weight:600;">Edit</button>` : ''}
+              ${d.status==='signed'||d.status==='locked'||d.status==='cosign_open' ? `<button onclick="downloadPdf('${d.doc_id}')" style="padding:5px 10px;background:var(--success-bg);border:1px solid var(--success-border);border-radius:6px;color:var(--success);font-size:11px;cursor:pointer;font-weight:600;">Download</button>` : ''}
+              <button onclick="event.stopPropagation();generateCosignLink('${d.doc_id}',event)" style="padding:5px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;color:#1d4ed8;font-size:11px;cursor:pointer;font-weight:600;">Link Co-Sign</button>
+              <button onclick="deleteDoc('${d.doc_id}','${d.status}',event)" style="padding:5px 10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;color:#991b1b;font-size:11px;cursor:pointer;font-weight:600;">Hapus</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function statusStyle(s) {
+  const styles = {
+    draft: 'background:#f0ebe8;color:var(--text3);',
+    signed: 'background:var(--success-bg);color:var(--success);',
+    locked: 'background:var(--warn-bg);color:var(--warn);',
+    cosign_open: 'background:var(--maroon-light);color:var(--maroon);'
+  };
+  return styles[s] || styles.draft;
+}
+
+// UPLOAD - attach on DOM ready
+function initUpload() {
+  attachUploadZone();
+  const fi = document.getElementById('file-input');
+  if (fi) fi.onchange = e => handleFile(e.target.files[0]);
+}
+
+async function handleFile(file) {
+  if (!file||!file.name.endsWith('.pdf')) { toast('Pilih file PDF','error'); return; }
+  document.getElementById('upload-zone').innerHTML = '<div style="padding:20px;color:#6b4a4a"><span class="spinner"></span>Mengupload '+file.name+'...</div>';
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const res = await fetch('/api/documents/upload', {method:'POST', headers:{'Authorization':'Bearer '+TOKEN}, body:fd});
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail); }
+    const data = await res.json();
+    currentDocId = data.doc_id; currentPages = data.pages; currentPage = 1; previewImages = {};
+    toast('✓ '+file.name+' berhasil diupload','success');
+    document.getElementById('step-upload').style.display='none';
+    document.getElementById('sign-editor').style.display='block';
+    document.getElementById('ctrl-page').max = currentPages.length;
+    document.getElementById('page-label').textContent = 'Halaman 1 / '+currentPages.length;
+    await loadPdfJs(data.doc_id);
+    initDraggables();
+  } catch(e) { toast(e.message,'error'); resetUploadZone(); }
+}
+
+function resetUploadZone() {
+  const zone = document.getElementById('upload-zone');
+  zone.innerHTML = '<div style="font-size:48px;margin-bottom:12px;opacity:.4;color:#6b1a1a;">↑</div><h3 style="font-size:16px;margin-bottom:6px;">Drag & drop PDF di sini</h3><p style="font-size:13px;color:#a08080;">atau klik untuk pilih file · maksimal 50MB</p><input type="file" id="file-input" accept=".pdf" style="display:none">';
+  document.getElementById('file-input').onchange = e => handleFile(e.target.files[0]);
+  attachUploadZone();
+}
+
+function attachUploadZone() {
+  const zone = document.getElementById('upload-zone');
+  if (!zone) return;
+  zone.onclick = () => document.getElementById('file-input').click();
+  zone.ondragover = e => { e.preventDefault(); zone.style.borderColor='#6b1a1a'; zone.style.background='#fdf5f5'; };
+  zone.ondragleave = () => { zone.style.borderColor='#e8ddd8'; zone.style.background='#f5f0ee'; };
+  zone.ondrop = e => { e.preventDefault(); zone.style.borderColor='#e8ddd8'; zone.style.background='#f5f0ee'; handleFile(e.dataTransfer.files[0]); };
+}
+
+function resetEditor() {
+  document.getElementById('step-upload').style.display='block';
+  document.getElementById('sign-editor').style.display='none';
+  document.getElementById('sign-result').style.display='none';
+  resetUploadZone(); currentDocId=null; pdfDoc=null;
+}
+
+let pdfDoc = null;
+
+async function loadPdfJs(docId) {
+  try {
+    const res = await fetch('/api/documents/' + docId + '/raw', {
+      headers: {'Authorization': 'Bearer ' + TOKEN}
+    });
+    if (!res.ok) throw new Error('Gagal load PDF');
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    pdfDoc = await pdfjsLib.getDocument(blobUrl).promise;
+    await renderPdfPage(1);
+    setTimeout(() => buildPageSelector(pdfDoc.numPages), 100);
+  } catch(e) {
+    console.error('PDF.js error:', e);
+    toast('Gagal load preview PDF', 'error');
+  }
+}
+
+async function renderPdfPage(pageNum) {
+  if (!pdfDoc) return;
+  const page = await pdfDoc.getPage(pageNum);
+  const canvas = document.getElementById('pdf-canvas');
+  const wrap = document.getElementById('pdf-wrap');
+  const scale = wrap.offsetWidth / page.getViewport({scale:1}).width;
+  const viewport = page.getViewport({scale});
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+  // Reposition draggable elements after render
+  setTimeout(() => {
+    setElementPos('sig-drag', positions.sig, false);
+    setElementPos('qr-drag', positions.qr, true);
+  }, 100);
+}
+
+async function loadPagePreview(page) {
+  await renderPdfPage(page);
+}
+
+function changePage(delta) {
+  const np = currentPage+delta;
+  if (np<1||np>currentPages.length) return;
+  currentPage=np;
+  document.getElementById('page-label').textContent='Halaman '+currentPage+' / '+currentPages.length;
+  document.getElementById('ctrl-page').value=currentPage;
+  renderPdfPage(currentPage);
+}
+
+function buildPageSelector(totalPages) {
+  const container = document.getElementById('page-selector');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 1; i <= totalPages; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = i;
+    btn.dataset.page = i;
+    btn.style.cssText = 'width:34px;height:34px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--mono);';
+    btn.onclick = () => {
+      btn.classList.toggle('page-selected');
+      if (btn.classList.contains('page-selected')) {
+        btn.style.cssText = 'width:34px;height:34px;border-radius:8px;border:1.5px solid var(--maroon);background:var(--maroon);color:#fff;font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--mono);font-weight:600;';
+      } else {
+        btn.style.cssText = 'width:34px;height:34px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--mono);';
+      }
+      // Update preview to show selected page
+      const firstSelected = getSelectedPages()[0];
+      if (firstSelected) {
+        currentPage = firstSelected;
+        document.getElementById('page-label').textContent = 'Halaman ' + currentPage + ' / ' + totalPages;
+        renderPdfPage(currentPage);
+      }
+    };
+    // Select page 1 by default
+    if (i === 1) {
+      btn.classList.add('page-selected');
+      btn.style.cssText = 'width:34px;height:34px;border-radius:8px;border:1.5px solid var(--maroon);background:var(--maroon);color:#fff;font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--mono);font-weight:600;';
+    }
+    container.appendChild(btn);
+  }
+}
+
+function getSelectedPages() {
+  const btns = document.querySelectorAll('#page-selector .page-selected');
+  return Array.from(btns).map(b => parseInt(b.dataset.page)).sort((a,b) => a-b);
+}
+
+function initDraggables() {
+  setElementPos('sig-drag', positions.sig, false);
+  setElementPos('qr-drag', positions.qr, true);
+  updateCoordInputs();
+  makeDraggable('sig-drag','sig-resize','sig',false);
+  makeDraggable('qr-drag','qr-resize','qr',true);
+}
+
+function setElementPos(elId, pos, square) {
+  const el=document.getElementById(elId), wrap=document.getElementById('pdf-wrap');
+  const W=wrap.offsetWidth, H=wrap.offsetHeight;
+  el.style.left=(pos.x/100*W)+'px'; el.style.top=(pos.y/100*H)+'px';
+  el.style.width=(pos.w/100*W)+'px';
+  el.style.height=square?(pos.w/100*W)+'px':(pos.h/100*H)+'px';
+}
+
+function updateCoordInputs() {
+  document.getElementById('sig-x').value=positions.sig.x.toFixed(1);
+  document.getElementById('sig-y').value=positions.sig.y.toFixed(1);
+  document.getElementById('sig-w').value=positions.sig.w.toFixed(1);
+  document.getElementById('sig-h').value=positions.sig.h.toFixed(1);
+  document.getElementById('qr-x').value=positions.qr.x.toFixed(1);
+  document.getElementById('qr-y').value=positions.qr.y.toFixed(1);
+  document.getElementById('qr-size').value=positions.qr.w.toFixed(1);
+  // Also update cosig hidden inputs if they exist
+  if(document.getElementById('cosig-x')) updateCosigHidden();
+}
+
+function makeDraggable(elId, resizeId, key, square) {
+  const el=document.getElementById(elId), resizeEl=document.getElementById(resizeId), wrap=document.getElementById('pdf-wrap');
+  el.addEventListener('mousedown', e => {
+    if(e.target===resizeEl) return; e.preventDefault();
+    const sx=e.clientX,sy=e.clientY,sl=el.offsetLeft,st=el.offsetTop;
+    const onMove=ev=>{
+      const W=wrap.offsetWidth,H=wrap.offsetHeight;
+      let nl=Math.max(0,Math.min(W-el.offsetWidth,sl+ev.clientX-sx));
+      let nt=Math.max(0,Math.min(H-el.offsetHeight,st+ev.clientY-sy));
+      el.style.left=nl+'px'; el.style.top=nt+'px';
+      positions[key].x=nl/W*100; positions[key].y=nt/H*100;
+      updateCoordInputs();
+    };
+    const onUp=()=>{document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);};
+    document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
+  });
+  resizeEl.addEventListener('mousedown', e => {
+    e.preventDefault(); e.stopPropagation();
+    const sx=e.clientX,sw=el.offsetWidth,sh=el.offsetHeight;
+    const onMove=ev=>{
+      const W=wrap.offsetWidth,H=wrap.offsetHeight;
+      const nw=Math.max(60,sw+ev.clientX-sx);
+      el.style.width=nw+'px';
+      el.style.height=square?nw+'px':Math.max(30,sh+(ev.clientX-sx)*0.3)+'px';
+      positions[key].w=nw/W*100;
+      positions[key].h=square?nw/W*100:el.offsetHeight/H*100;
+      updateCoordInputs();
+    };
+    const onUp=()=>{document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);};
+    document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
+  });
+}
+
+function toggleCosignExpiry(show) {
+  const row = document.getElementById('cosign-expiry-row');
+  if (row) row.style.display = show ? 'block' : 'none';
+  
+  const posSection = document.getElementById('cosign-pos-section');
+  if (posSection) posSection.style.display = show ? 'block' : 'none';
+  
+  const cosigDrag = document.getElementById('cosig-drag');
+  const cosigQrDrag = document.getElementById('cosig-qr-drag');
+  if (cosigDrag) cosigDrag.style.setProperty('display', show ? 'flex' : 'none', 'important');
+  if (cosigQrDrag) cosigQrDrag.style.setProperty('display', show ? 'flex' : 'none', 'important');
+  
+  if (show) {
+    // Init cosign draggables
+    setTimeout(() => {
+      setElementPos('cosig-drag', positions.cosig, false);
+      setElementPos('cosig-qr-drag', positions.cosig_qr, true);
+      updateCosigHidden();
+      makeDraggable('cosig-drag','cosig-resize','cosig',false);
+      makeDraggable('cosig-qr-drag','cosig-qr-resize','cosig_qr',true);
+    }, 100);
+  }
+}
+
+function toggleCosignSigBlock(show) {
+  const el = document.getElementById('cosig-drag');
+  if (el) el.style.display = show ? 'flex' : 'none';
+}
+
+function updateCosigHidden() {
+  document.getElementById('cosig-x').value = positions.cosig.x.toFixed(2);
+  document.getElementById('cosig-y').value = positions.cosig.y.toFixed(2);
+  document.getElementById('cosig-w').value = positions.cosig.w.toFixed(2);
+  document.getElementById('cosig-h').value = positions.cosig.h.toFixed(2);
+  document.getElementById('cosig-qr-x').value = positions.cosig_qr.x.toFixed(2);
+  document.getElementById('cosig-qr-y').value = positions.cosig_qr.y.toFixed(2);
+  document.getElementById('cosig-qr-size').value = positions.cosig_qr.w.toFixed(2);
+}
+
+function toggleSigBlock(show) {
+  const sigDrag = document.getElementById('sig-drag');
+  if (sigDrag) sigDrag.style.display = show ? 'flex' : 'none';
+}
+
+async function downloadPdf(docId) {
+  try {
+    const res = await fetch('/api/documents/'+docId+'/download', {
+      headers: {'Authorization': 'Bearer '+TOKEN}
+    });
+    if (!res.ok) throw new Error('Gagal download');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'signed_document.pdf';
+    a.click(); URL.revokeObjectURL(url);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function doSign() {
+  const reason = document.getElementById('sign-reason').value.trim();
+  if (!reason) {
+    document.getElementById('sign-reason').style.borderColor = 'var(--danger)';
+    document.getElementById('sign-reason').focus();
+    toast('Alasan/reason wajib diisi!', 'error');
+    return;
+  }
+  document.getElementById('sign-reason').style.borderColor = '';
+  const btn=document.getElementById('btn-do-sign');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Memproses...';
+  const fd=new FormData();
+  const selectedPages = getSelectedPages();
+  if (selectedPages.length === 0) { toast('Pilih minimal satu halaman!', 'error'); btn.disabled=false; btn.innerHTML='Tanda Tangani Sekarang'; return; }
+  fd.append('page_number', selectedPages[0]);
+  fd.append('extra_pages', JSON.stringify(selectedPages.slice(1)));
+  fd.append('sig_x', positions.sig.x.toFixed(2));
+  fd.append('sig_y', positions.sig.y.toFixed(2));
+  fd.append('sig_w', positions.sig.w.toFixed(2));
+  fd.append('sig_h', positions.sig.h.toFixed(2));
+  fd.append('qr_x', positions.qr.x.toFixed(2));
+  fd.append('qr_y', positions.qr.y.toFixed(2));
+  fd.append('qr_size', positions.qr.w.toFixed(2));
+  fd.append('jabatan', document.getElementById('sign-jabatan').value || '');
+  fd.append('email_custom', document.getElementById('sign-email-custom').value || '');
+  fd.append('reason', reason);
+  fd.append('show_sig_block', document.getElementById('opt-show-sig').checked);
+  fd.append('lock_after', document.getElementById('opt-lock').checked);
+  fd.append('allow_cosign', document.getElementById('opt-cosign').checked);
+  try {
+    const res=await fetch('/api/documents/'+currentDocId+'/sign',{method:'POST',headers:{'Authorization':'Bearer '+TOKEN},body:fd});
+    if(!res.ok){const e=await res.json();throw new Error(e.detail);}
+    const data=await res.json();
+    toast('✓ Dokumen berhasil ditandatangani!','success');
+    
+    // Generate cosign link if allow_cosign checked
+    let cosignHtml = '';
+    if (document.getElementById('opt-cosign').checked) {
+      try {
+        const cosignHours = parseInt(document.getElementById('cosign-hours')?.value || '24');
+        const clFd = new FormData();
+        clFd.append('expire_hours', cosignHours);
+        // Embed position settings so cosigner doesn't need to drag-drop
+        clFd.append('sig_x', positions.sig.x.toFixed(2));
+        clFd.append('sig_y', positions.sig.y.toFixed(2));
+        clFd.append('sig_w', positions.sig.w.toFixed(2));
+        clFd.append('sig_h', positions.sig.h.toFixed(2));
+        clFd.append('qr_x', positions.qr.x.toFixed(2));
+        clFd.append('qr_y', positions.qr.y.toFixed(2));
+        clFd.append('qr_size', positions.qr.w.toFixed(2));
+        clFd.append('show_sig_block', document.getElementById('opt-show-sig').checked ? 'true' : 'false');
+        // Co-signer position settings
+        clFd.append('cosig_x', document.getElementById('cosig-x').value || positions.cosig.x);
+        clFd.append('cosig_y', document.getElementById('cosig-y').value || positions.cosig.y);
+        clFd.append('cosig_w', document.getElementById('cosig-w').value || positions.cosig.w);
+        clFd.append('cosig_h', document.getElementById('cosig-h').value || positions.cosig.h);
+        clFd.append('cosig_qr_x', document.getElementById('cosig-qr-x').value || positions.cosig_qr.x);
+        clFd.append('cosig_qr_y', document.getElementById('cosig-qr-y').value || positions.cosig_qr.y);
+        clFd.append('cosig_qr_size', document.getElementById('cosig-qr-size').value || positions.cosig_qr.w);
+        clFd.append('cosig_show_sig', document.getElementById('cosign-show-sig')?.checked ? 'true' : 'false');
+        clFd.append('page_number', getSelectedPages()[0] || 1);
+        clFd.append('extra_pages', JSON.stringify(getSelectedPages().slice(1)));
+        const clRes = await fetch('/api/documents/'+currentDocId+'/cosign-link', {
+          method: 'POST', headers: {'Authorization': 'Bearer '+TOKEN}, body: clFd
+        });
+        if (clRes.ok) {
+          const clData = await clRes.json();
+          cosignHtml = `
+            <div style="margin-top:12px;padding:12px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;">
+              <div style="font-size:12px;font-weight:600;color:#1d4ed8;margin-bottom:6px;">Link Co-Sign (berlaku ${cosignHours} jam)</div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="text" value="${clData.cosign_url}" readonly
+                  style="flex:1;padding:7px 10px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;font-size:11px;font-family:var(--mono);color:var(--text);">
+                <button onclick="navigator.clipboard.writeText('${clData.cosign_url}');toast('Link disalin!','success')"
+                  style="padding:7px 12px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;white-space:nowrap;">Salin</button>
+              </div>
+              <div style="font-size:11px;color:#3b82f6;margin-top:4px;">Kirim link ini ke pihak yang perlu menandatangani</div>
+            </div>`;
+        }
+      } catch(e) {}
+    }
+    
+    document.getElementById('sign-result').style.display='';
+    document.getElementById('sign-result').innerHTML=`
+      <div style="background:var(--success-bg);border:1px solid #a7d4bc;border-radius:10px;padding:16px;">
+        <div style="font-weight:600;color:var(--success);margin-bottom:8px;">✓ Berhasil Ditandatangani</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Status: <b>${data.status}</b></div>
+        <button onclick="downloadPdf('${currentDocId}')" style="padding:9px 18px;background:var(--maroon);color:#fff;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;">⬇ Download PDF</button>
+        ${cosignHtml}
+      </div>`;
+    btn.disabled=false; btn.innerHTML='Tanda Tangani Sekarang';
+  } catch(e) { toast(e.message,'error'); btn.disabled=false; btn.innerHTML='Tanda Tangani Sekarang'; }
+}
+
+function toast(msg,type='info') {
+  const wrap=document.getElementById('toast-wrap');
+  const el=document.createElement('div');
+  el.className='toast toast-'+type; el.textContent=msg;
+  wrap.appendChild(el); setTimeout(()=>el.remove(),4000);
+}
+
+// ─────────────────────────────────────────────
+// PROFILES
+// ─────────────────────────────────────────────
+let profilesCache = [];
+
+async function loadProfiles() {
+  try {
+    profilesCache = await api('/api/profiles');
+    renderProfilesList();
+    updateProfileDropdown();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function renderProfilesList() {
+  const el = document.getElementById('profiles-list');
+  if (!el) return;
+  if (!profilesCache.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:48px;height:48px;opacity:.25;margin-bottom:12px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      <p>Belum ada profil. Klik "+ Tambah Profil" untuk mulai.</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = profilesCache.map(p => `
+    <div class="panel" style="margin-bottom:12px;">
+      <div style="padding:16px 20px;display:flex;align-items:center;gap:14px;">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--maroon-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:var(--maroon)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div style="font-size:15px;font-weight:600;">${p.display_name}</div>
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--maroon-light);color:var(--maroon);letter-spacing:.05em;">${p.name}</span>
+            ${p.is_default ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--success-bg);color:var(--success);">Default</span>' : ''}
+          </div>
+          ${p.jabatan ? `<div style="font-size:13px;color:var(--text2);margin-top:3px;">${p.jabatan}</div>` : ''}
+          ${p.email ? `<div style="font-size:12px;color:var(--text3);margin-top:2px;">${p.email}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <button onclick="editProfile('${p.id}')" style="padding:6px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;color:var(--text2);">Edit</button>
+
+      <button onclick="deleteProfile('${p.id}',event)" style="padding:6px 12px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;font-size:12px;cursor:pointer;color:#991b1b;">Hapus</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateProfileDropdown() {
+  const sel = document.getElementById('sign-profile');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">-- Pilih Profil --</option>' +
+    profilesCache.map(p => `<option value="${p.id}" ${p.is_default && !current ? 'selected' : ''}>${p.name} — ${p.display_name}</option>`).join('');
+  if (!current && profilesCache.find(p => p.is_default)) {
+    onProfileChange();
+  }
+}
+
+function onProfileChange() {
+  const sel = document.getElementById('sign-profile');
+  const pid = sel.value;
+  const profile = profilesCache.find(p => p.id === pid);
+  const preview = document.getElementById('profile-preview');
+  if (profile) {
+    document.getElementById('sign-jabatan').value = profile.jabatan || '';
+    document.getElementById('sign-email-custom').value = profile.email || '';
+    document.getElementById('pp-name').textContent = profile.display_name;
+    document.getElementById('pp-jabatan').textContent = profile.jabatan || '';
+    document.getElementById('pp-email').textContent = profile.email || '';
+    preview.style.display = 'block';
+  } else {
+    document.getElementById('sign-jabatan').value = '';
+    document.getElementById('sign-email-custom').value = '';
+    preview.style.display = 'none';
+  }
+}
+
+function showProfileForm(editId = null) {
+  document.getElementById('profile-form').style.display = '';
+  document.getElementById('edit-profile-id').value = editId || '';
+  if (!editId) {
+    document.getElementById('profile-form-title').textContent = 'Tambah Profil Baru';
+    document.getElementById('pf-name').value = '';
+    document.getElementById('pf-display').value = '';
+    document.getElementById('pf-jabatan').value = '';
+    document.getElementById('pf-email').value = '';
+    document.getElementById('pf-default').checked = profilesCache.length === 0;
+  }
+  document.getElementById('pf-name').focus();
+}
+
+function cancelProfileForm() {
+  document.getElementById('profile-form').style.display = 'none';
+}
+
+function editProfile(id) {
+  const p = profilesCache.find(x => x.id === id);
+  if (!p) return;
+  showProfileForm(id);
+  document.getElementById('profile-form-title').textContent = 'Edit Profil';
+  document.getElementById('pf-name').value = p.name;
+  document.getElementById('pf-display').value = p.display_name;
+  document.getElementById('pf-jabatan').value = p.jabatan || '';
+  document.getElementById('pf-email').value = p.email || '';
+  document.getElementById('pf-default').checked = p.is_default;
+}
+
+async function saveProfile() {
+  const name = document.getElementById('pf-name').value.trim();
+  const display = document.getElementById('pf-display').value.trim();
+  if (!name || !display) { toast('Nama profil dan nama tampil wajib diisi!', 'error'); return; }
+  
+  const editId = document.getElementById('edit-profile-id').value;
+  const fd = new FormData();
+  fd.append('name', name);
+  fd.append('display_name', display);
+  fd.append('jabatan', document.getElementById('pf-jabatan').value.trim());
+  fd.append('email', document.getElementById('pf-email').value.trim());
+  fd.append('is_default', document.getElementById('pf-default').checked);
+  
+  try {
+    const method = editId ? 'PUT' : 'POST';
+    const url = editId ? `/api/profiles/${editId}` : '/api/profiles';
+    const res = await fetch(url, { method, headers: {'Authorization': 'Bearer '+TOKEN}, body: fd });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Gagal'); }
+    toast(editId ? 'Profil diperbarui!' : 'Profil berhasil dibuat!', 'success');
+    cancelProfileForm();
+    await loadProfiles();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteProfile(id, e) {
+  e.stopPropagation();
+  if (!confirm('Hapus profil ini?')) return;
+  try {
+    const res = await fetch('/api/profiles/'+id, { method:'DELETE', headers:{'Authorization':'Bearer '+TOKEN} });
+    if (!res.ok) throw new Error('Gagal');
+    toast('Profil dihapus', 'success');
+    await loadProfiles();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+tryAutoLogin();
+</script>
+</body>
+</html>

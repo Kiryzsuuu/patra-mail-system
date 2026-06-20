@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+<title>Tanda Tangan Dokumen — InARSign</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Inter:wght@300;400;500;600&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --maroon: #6b1a1a; --maroon2: #8b2020; --maroon-light: #f9f0f0;
+  --success: #2d6a4f; --success-bg: #f0f7f4; --success-border: #a7d4bc;
+  --danger: #991b1b; --danger-bg: #fef2f2;
+  --text: #1a0a0a; --text2: #6b4a4a; --text3: #a08080;
+  --border: #e8ddd8; --surface: #fff; --bg: #faf8f6; --surface2: #f5f0ee;
+  --serif: 'Playfair Display', serif; --sans: 'Inter', sans-serif; --mono: 'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { 
+  background: #6b1a1a; color: var(--text); font-family: var(--sans); 
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-start; padding: 40px 24px;
+  position: relative; overflow-y: auto;
+}
+.bg-ornament { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.wrap { position: relative; z-index: 1; width: 100%; max-width: 480px; }
+
+/* NAV */
+.top-brand { text-align: center; margin-bottom: 24px; }
+.top-brand .logo { font-family: var(--serif); font-size: 24px; color: #fff; }
+.top-brand .logo span { font-style: italic; opacity: .85; }
+.top-brand .sub { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px; }
+
+/* CARDS */
+.card { background: var(--surface); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+
+.card-header { background: var(--maroon); padding: 24px 28px; }
+.card-header h2 { font-family: var(--serif); font-size: 18px; color: #fff; }
+.card-header p { font-size: 13px; color: rgba(255,255,255,.65); margin-top: 4px; }
+.doc-badge { background: rgba(255,255,255,.12); border-radius: 8px; padding: 10px 14px; margin-top: 14px; font-size: 12px; color: rgba(255,255,255,.8); display: flex; align-items: center; gap: 8px; }
+.timer-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.12); border-radius: 20px; padding: 5px 12px; font-size: 12px; color: rgba(255,255,255,.75); margin-top: 10px; }
+
+.card-body { padding: 28px; }
+
+/* FORM */
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin-bottom: 6px; }
+.field input, .field textarea {
+  width: 100%; padding: 12px 14px; background: var(--surface2);
+  border: 1.5px solid var(--border); border-radius: 10px;
+  color: var(--text); font-family: var(--sans); font-size: 14px;
+  transition: border-color .2s;
+}
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--maroon); background: #fff; }
+.field input.err { border-color: var(--danger); }
+.field-note { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+.btn-approve {
+  width: 100%; padding: 15px; background: var(--maroon); border: none;
+  border-radius: 12px; color: #fff; font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: background .2s; letter-spacing: .02em;
+}
+.btn-approve:hover { background: var(--maroon2); }
+.btn-approve:disabled { opacity: .45; cursor: not-allowed; }
+
+/* STATUS CARDS */
+.status-card { background: var(--surface); border-radius: 20px; padding: 48px 32px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.status-icon { font-size: 52px; margin-bottom: 16px; }
+.status-title { font-family: var(--serif); font-size: 22px; margin-bottom: 10px; }
+.status-msg { font-size: 14px; color: var(--text2); line-height: 1.7; }
+
+/* SUCCESS */
+.success-info { background: var(--success-bg); border: 1px solid var(--success-border); border-radius: 12px; padding: 16px; margin: 20px 0; text-align: left; font-size: 13px; color: var(--text2); }
+.success-info div { margin-bottom: 4px; }
+.success-info div:last-child { margin-bottom: 0; }
+
+.btn-download { width: 100%; padding: 14px; background: var(--maroon); border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+/* SPINNER */
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* TOAST */
+.toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast { padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; max-width: 320px; animation: toastIn .25s ease; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+.toast-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+.toast-error { background: var(--danger-bg); color: var(--danger); border: 1px solid #fca5a5; }
+@keyframes toastIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+footer { text-align: center; margin-top: 20px; font-size: 11px; color: rgba(255,255,255,.35); position: relative; z-index: 1; }
+
+@media(max-width: 520px) { .wrap { padding: 0; } }
+</style>
+</head>
+<body>
+
+<div class="bg-ornament">
+  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;">
+    <circle cx="75%" cy="20%" r="380" fill="none" stroke="#7a1e1e" stroke-width="80"/>
+    <circle cx="15%" cy="85%" r="280" fill="none" stroke="#7a1e1e" stroke-width="50"/>
+    <circle cx="75%" cy="20%" r="200" fill="none" stroke="rgba(200,169,90,0.12)" stroke-width="1"/>
+    <circle cx="75%" cy="20%" r="260" fill="none" stroke="rgba(200,169,90,0.07)" stroke-width="1"/>
+  </svg>
+</div>
+
+<div class="wrap">
+  <div class="top-brand">
+    <div class="logo">In<span>AR</span>Sign</div>
+    <div class="sub">Sistem Tanda Tangan Digital Pribadi</div>
+  </div>
+
+  <!-- LOADING -->
+  <div id="step-loading" class="status-card">
+    <div class="status-icon">⏳</div>
+    <div class="status-title">Memvalidasi link...</div>
+    <div class="status-msg">Mohon tunggu sebentar</div>
+  </div>
+
+  <!-- INVALID -->
+  <div id="step-invalid" class="status-card" style="display:none">
+    <div class="status-icon" id="inv-icon">⛔</div>
+    <div class="status-title" id="inv-title">Link Tidak Valid</div>
+    <div class="status-msg" id="inv-msg">Link ini tidak valid.</div>
+  </div>
+
+  <!-- BIODATA FORM -->
+  <div id="step-bio" class="card" style="display:none">
+    <div class="card-header">
+      <h2>Anda diundang menandatangani dokumen</h2>
+      <p>Isi identitas Anda — tanda tangan akan langsung diproses</p>
+      <div class="doc-badge">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+        <span id="doc-name">Memuat...</span>
+      </div>
+      <div class="timer-badge">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span id="timer">Menghitung...</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label>Nama Lengkap <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="bio-name" placeholder="Masukkan nama lengkap Anda">
+      </div>
+      <div class="field">
+        <label>Jabatan / Posisi</label>
+        <input type="text" id="bio-jabatan" placeholder="cth: Dosen Pembimbing, Manager...">
+        <div class="field-note">Akan tampil di halaman verifikasi QR</div>
+      </div>
+      <div class="field">
+        <label>Email <span style="color:var(--danger)">*</span></label>
+        <input type="email" id="bio-email" placeholder="email@domain.com">
+      </div>
+      <div class="field">
+        <label>Alasan / Reason <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="bio-reason" placeholder="cth: Menyetujui, Sebagai pembimbing...">
+      </div>
+      <button class="btn-approve" id="btn-approve" onclick="doApprove()">
+        Setujui &amp; Tanda Tangani
+      </button>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="step-success" class="card" style="display:none">
+    <div class="card-body" style="text-align:center;padding:40px 28px;">
+      <div style="font-size:52px;margin-bottom:16px;">✅</div>
+      <div style="font-family:var(--serif);font-size:22px;color:var(--success);margin-bottom:8px;">Berhasil Ditandatangani!</div>
+      <div style="font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.6;">Tanda tangan Anda telah direkam dan dapat diverifikasi melalui QR Code pada dokumen.</div>
+      <div class="success-info">
+        <div><b>Nama:</b> <span id="s-name"></span></div>
+        <div><b>Jabatan:</b> <span id="s-jabatan"></span></div>
+        <div><b>Waktu:</b> <span id="s-time"></span></div>
+      </div>
+      <button class="btn-download" onclick="downloadPdf()">Download PDF Tersigned</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>© 2026 Indra Aulia · InARSign</footer>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const TOKEN = params.get('token') || '';
+const DOC_ID = params.get('doc') || '';
+let docSettings = {};
+
+window.onload = async () => {
+  if (!TOKEN || !DOC_ID) { showInvalid('⛔', 'Link Tidak Lengkap', 'Pastikan Anda membuka link yang dikirimkan secara lengkap.'); return; }
+  
+  try {
+    const res = await fetch(`/api/cosign/validate?token=${encodeURIComponent(TOKEN)}&doc=${DOC_ID}`);
+    const data = await res.json();
+    
+    if (data.used) {
+      showInvalid('🔒', 'Dokumen Sudah Ditandatangani', 'Link ini sudah tidak dapat diakses karena dokumen telah ditandatangani. Hubungi pengirim jika ada keperluan lain.');
+      return;
+    }
+    if (!data.valid || data.expired) {
+      showInvalid('⏰', 'Sesi Tanda Tangan Expired', 'Sesi tanda tangan telah expired. Silahkan hubungi penanda tangan utama untuk mendapatkan link baru.');
+      return;
+    }
+    
+    docSettings = data.settings || {};
+    document.getElementById('doc-name').textContent = data.filename || 'Dokumen';
+    if (data.expire_at) startTimer(data.expire_at);
+    
+    show('step-bio');
+  } catch(e) {
+    showInvalid('⛔', 'Gagal Memvalidasi', 'Terjadi kesalahan. Coba lagi atau hubungi pengirim.');
+  }
+};
+
+function startTimer(expireAt) {
+  const el = document.getElementById('timer');
+  const update = () => {
+    const diff = expireAt * 1000 - Date.now();
+    if (diff <= 0) { el.textContent = 'Link sudah expired'; return; }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = `Berlaku ${h}j ${m}m ${s}d lagi`;
+  };
+  update();
+  setInterval(update, 1000);
+}
+
+async function doApprove() {
+  const name = document.getElementById('bio-name').value.trim();
+  const email = document.getElementById('bio-email').value.trim();
+  const reason = document.getElementById('bio-reason').value.trim();
+  
+  // Validate
+  let ok = true;
+  [['bio-name', name], ['bio-email', email], ['bio-reason', reason]].forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (!val) { el.classList.add('err'); ok = false; }
+    else el.classList.remove('err');
+  });
+  if (!ok) { toast('Lengkapi semua field yang wajib diisi', 'error'); return; }
+
+  const btn = document.getElementById('btn-approve');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Memproses tanda tangan...';
+
+  const fd = new FormData();
+  fd.append('token', TOKEN);
+  fd.append('doc_id', DOC_ID);
+  fd.append('signer_name', name);
+  fd.append('signer_email', email);
+  fd.append('page_number', 1);
+  fd.append('extra_pages', '[]');
+  fd.append('jabatan', document.getElementById('bio-jabatan').value.trim());
+  fd.append('reason', reason);
+
+  try {
+    const res = await fetch('/api/cosign/sign', { method: 'POST', body: fd });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Gagal'); }
+    
+    document.getElementById('s-name').textContent = name;
+    document.getElementById('s-jabatan').textContent = document.getElementById('bio-jabatan').value.trim() || '-';
+    document.getElementById('s-time').textContent = new Date().toLocaleString('id-ID');
+    show('step-success');
+  } catch(e) {
+    toast(String(e.message || 'Terjadi kesalahan'), 'error');
+    btn.disabled = false;
+    btn.innerHTML = 'Setujui & Tanda Tangani';
+  }
+}
+
+async function downloadPdf() {
+  try {
+    const res = await fetch(`/api/cosign/pdf/${DOC_ID}?token=${encodeURIComponent(TOKEN)}`);
+    if (!res.ok) throw new Error('Gagal download');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'signed_document.pdf';
+    a.click(); URL.revokeObjectURL(url);
+  } catch(e) { toast(String(e.message || 'Terjadi kesalahan'), 'error'); }
+}
+
+function show(id) {
+  ['step-loading','step-invalid','step-bio','step-success'].forEach(s => {
+    document.getElementById(s).style.display = s === id ? '' : 'none';
+  });
+}
+
+function showInvalid(icon, title, msg) {
+  document.getElementById('inv-icon').textContent = icon;
+  document.getElementById('inv-title').textContent = title;
+  document.getElementById('inv-msg').textContent = msg;
+  show('step-invalid');
+}
+
+function toast(msg, type='error') {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`; el.textContent = msg;
+  wrap.appendChild(el); setTimeout(() => el.remove(), 4000);
+}
+</script>
+</body>
+</html>
