@@ -1780,9 +1780,41 @@ function getListValues(listId) {
 }
 
 // ── SUBMIT ──
+// Field wajib sebelum kirim/draf — beda untuk internal vs eksternal
+function validateRequired() {
+  const errors = [];
+  const visible = el => el && el.offsetParent !== null;
+  const blank   = el => !el.value || !el.value.trim();
+
+  // Isi surat: editor utama ATAU minimal satu butir terisi
+  const bodyText    = (typeof quill !== 'undefined') ? quill.getText().trim() : '';
+  const butirFilled = Array.from(document.querySelectorAll('#butirList .butir-teks')).some(t => t.value.trim());
+  const hasIsi      = bodyText.length > 0 || butirFilled;
+
+  if (currentJenis === 'eksternal') {
+    const tgl   = document.getElementById('naskah_tgl_surat');
+    const tuju  = document.getElementById('naskah_kepada_alamat');
+    if (visible(tgl)  && blank(tgl))  errors.push('Tanggal Surat');
+    if (visible(tuju) && blank(tuju)) errors.push('Kepada Yth.');
+    if (extList.length === 0)         errors.push('Penerima (pihak eksternal)');
+    if (!hasIsi)                      errors.push('Isi surat');
+  } else {
+    const kepada = document.getElementById('memo_kepada');
+    const klas   = document.getElementById('memo_klasifikasi');
+    if (visible(kepada) && blank(kepada)) errors.push('Kepada');
+    if (visible(klas)   && blank(klas))   errors.push('Klasifikasi');
+    const tertuju = document.querySelectorAll('#tertujuTags .selected-tag').length;
+    if (!tertuju)                         errors.push('Tertuju (penerima internal)');
+    if (!hasIsi)                          errors.push('Isi surat');
+  }
+  return errors;
+}
+
 function submitForm(action) {
-  if (action === 'send' && currentJenis === 'eksternal' && extList.length === 0) {
-    alert('Tambahkan minimal satu penerima eksternal.'); return;
+  const errors = validateRequired();
+  if (errors.length) {
+    alert('Lengkapi dulu kolom wajib berikut sebelum ' + (action === 'send' ? 'dikirim' : 'disimpan sebagai draf') + ':\n\n• ' + errors.join('\n• '));
+    return;
   }
   document.getElementById('formAction').value = action;
   document.getElementById('bodyHidden').value = quill.root.innerHTML;
