@@ -59,6 +59,15 @@
 .btn-add-row { margin-top:6px; font-size:12px; padding:5px 12px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:6px; cursor:pointer; color:var(--gray-600); }
 .btn-add-row:hover { background:var(--gray-100); }
 
+/* Seksi lipat (collapsible) untuk merapikan form yang panjang */
+details.cgroup { border:1px solid var(--gray-200); border-radius:8px; margin-bottom:10px; overflow:hidden; }
+details.cgroup > summary { list-style:none; cursor:pointer; padding:10px 14px; background:var(--gray-50); font-size:13px; font-weight:600; color:var(--gray-700); display:flex; align-items:center; gap:8px; }
+details.cgroup > summary::-webkit-details-marker { display:none; }
+details.cgroup > summary::before { content:'▸'; color:var(--gray-400); transition:transform .15s; font-size:11px; }
+details.cgroup[open] > summary::before { transform:rotate(90deg); }
+details.cgroup > .cgroup-body { padding:14px; border-top:1px solid var(--gray-200); }
+.cgroup-hint { font-size:11px; color:var(--gray-400); font-weight:400; }
+
 /* Dynamic list */
 .dyn-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
 .dyn-list-item { display:flex; gap:8px; align-items:center; }
@@ -1002,16 +1011,22 @@
       </div>
 
       <!-- ISI SURAT (Quill) -->
-      <div class="form-group" id="bodySection">
-        <label class="form-label" id="bodyLabel">Isi Surat / Catatan Tambahan</label>
-        <div id="quillEditor" style="min-height:200px;"></div>
-      </div>
+      <details class="cgroup" id="bodyDetails">
+        <summary><span id="bodyLabel">Isi Surat / Catatan Tambahan</span> <span class="cgroup-hint">(opsional)</span></summary>
+        <div class="cgroup-body">
+          <div class="form-group" id="bodySection" style="margin-bottom:0;">
+            <div id="quillEditor" style="min-height:160px;"></div>
+          </div>
+        </div>
+      </details>
 
       <!-- LAMPIRAN -->
-      <div class="form-group">
-        <label class="form-label">Lampiran <span style="font-size:11px;color:var(--gray-400);font-weight:400;">(opsional — PDF, Word, Gambar, maks. 10MB)</span></label>
-        <input type="file" name="lampiran" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif" style="padding:6px 10px;font-size:13px;">
-      </div>
+      <details class="cgroup">
+        <summary>Lampiran <span class="cgroup-hint">(opsional — PDF, Word, Gambar, maks. 10MB)</span></summary>
+        <div class="cgroup-body">
+          <input type="file" name="lampiran" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif" style="padding:6px 10px;font-size:13px;">
+        </div>
+      </details>
       </div><!-- /mainFormSections -->
 
       <div class="compose-actions">
