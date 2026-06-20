@@ -43,11 +43,12 @@
 
 /* Tipe surat section badges */
 .sec-header {
-  display:flex; align-items:center; gap:8px; margin-bottom:12px;
-  padding:8px 12px; background:var(--gray-50); border:1px solid var(--gray-200);
-  border-radius:8px; font-size:13px; font-weight:600; color:var(--gray-600);
+  display:flex; align-items:center; gap:8px; margin:10px 0 2px;
+  padding:0 0 8px; background:none; border:none;
+  border-bottom:1px solid var(--gray-200); border-radius:0;
+  font-size:13.5px; font-weight:700; color:var(--gray-800);
 }
-.sec-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; background:#071840; color:#fff; }
+.sec-badge { display:none; }
 
 /* Dynamic row table */
 .dyn-table { width:100%; border-collapse:collapse; margin-top:8px; }
@@ -59,18 +60,20 @@
 .btn-add-row { margin-top:6px; font-size:12px; padding:5px 12px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:6px; cursor:pointer; color:var(--gray-600); }
 .btn-add-row:hover { background:var(--gray-100); }
 
-/* Spasi internal seksi konsisten (hilangkan kesan berantakan) */
-#sec-memo, #sec-naskah { display:flex; flex-direction:column; gap:14px; }
-#sec-memo .sec-header, #sec-naskah .sec-header { margin-bottom:0; }
+/* Lebih lega & tidak berdesakan */
+.compose-form { gap:20px; padding:24px; }
+#sec-memo, #sec-naskah { display:flex; flex-direction:column; gap:16px; }
 #sec-memo .form-label, #sec-naskah .form-label { margin-bottom:2px; }
 
-/* Seksi lipat (collapsible) untuk merapikan form yang panjang */
-details.cgroup { border:1px solid var(--gray-200); border-radius:8px; margin-bottom:10px; overflow:hidden; }
-details.cgroup > summary { list-style:none; cursor:pointer; padding:10px 14px; background:var(--gray-50); font-size:13px; font-weight:600; color:var(--gray-700); display:flex; align-items:center; gap:8px; }
+/* Seksi lipat (collapsible) — ringan, tidak ramai */
+details.cgroup { border:1px solid var(--gray-150); border-radius:8px; overflow:hidden; }
+details.cgroup > summary { list-style:none; cursor:pointer; padding:11px 14px; background:#fff; font-size:13px; font-weight:500; color:var(--gray-600); display:flex; align-items:center; gap:8px; }
+details.cgroup > summary:hover { background:var(--gray-50); }
+details.cgroup[open] > summary { border-bottom:1px solid var(--gray-150); }
 details.cgroup > summary::-webkit-details-marker { display:none; }
 details.cgroup > summary::before { content:'▸'; color:var(--gray-400); transition:transform .15s; font-size:11px; }
 details.cgroup[open] > summary::before { transform:rotate(90deg); }
-details.cgroup > .cgroup-body { padding:14px; border-top:1px solid var(--gray-200); }
+details.cgroup > .cgroup-body { padding:16px; }
 .cgroup-hint { font-size:11px; color:var(--gray-400); font-weight:400; }
 
 /* Dynamic list */
@@ -924,7 +927,7 @@ details.cgroup > .cgroup-body { padding:14px; border-top:1px solid var(--gray-20
         </div>
       </div>
       <% } else { %>
-      <div style="padding:8px 14px;background:<%= jenisDefault==='eksternal' ? '#fff7ed' : '#eff6ff' %>;border:1px solid <%= jenisDefault==='eksternal' ? '#fed7aa' : '#bfdbfe' %>;border-radius:8px;font-size:12.5px;color:<%= jenisDefault==='eksternal' ? '#c2410c' : '#1d4ed8' %>;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+      <div style="padding:6px 0;font-size:12.5px;color:var(--gray-500);display:flex;align-items:center;gap:6px;">
         <% if (jenisDefault==='eksternal') { %>
         <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M2 10h16M10 2c-2 2.5-3 5-3 8s1 5.5 3 8M10 2c2 2.5 3 5 3 8s-1 5.5-3 8" stroke="currentColor" stroke-width="1.5"/></svg>
         Surat <strong>Eksternal</strong> — dikirim ke penerima di luar sistem
