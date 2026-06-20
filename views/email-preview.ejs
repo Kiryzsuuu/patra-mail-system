@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<% if (typeof baseHref !== 'undefined' && baseHref) { %><base href="<%= baseHref %>"><% } %>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Preview Surat — <%= email.subject %></title>
 <link rel="icon" type="image/png" href="/img/Group 1597880519.png">
@@ -307,7 +308,7 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
   <div class="toolbar-title">Preview — <%= tipe %>: <%= email.subject %></div>
   <% if (isSender || isOwner || isPendingCosigner) { %>
   <span class="toolbar-hint">Tanda tangan, lalu kirim</span>
-  <button class="btn-dl" onclick="window.print()">
+  <button class="btn-dl" id="btnDownload" onclick="downloadPdf()">
     <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M10 3v10M6 9l4 4 4-4M3 17h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Download PDF
   </button>
@@ -1570,6 +1571,28 @@ async function removeSigner(id, e) {
       const b = document.getElementById('btnAddSelf');
       if(b){ b.disabled=false; b.innerHTML=`<svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Tambah Tanda Tangan Saya`; }
     }
+  }
+}
+
+async function downloadPdf() {
+  const btn = document.getElementById('btnDownload');
+  const orig = btn.innerHTML;
+  btn.disabled = true; btn.textContent = 'Menyiapkan PDF...';
+  try {
+    const res = await fetch(`/email/${EMAIL_ID}/pdf`);
+    if (!res.ok) throw new Error('gagal');
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const cd = res.headers.get('Content-Disposition') || '';
+    const m  = cd.match(/filename="?([^"]+)"?/);
+    a.href = url; a.download = m ? m[1] : 'surat.pdf';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (e) {
+    alert('Gagal membuat PDF. Coba lagi.');
+  } finally {
+    btn.disabled = false; btn.innerHTML = orig;
   }
 }
 

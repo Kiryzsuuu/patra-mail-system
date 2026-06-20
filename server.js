@@ -32,6 +32,39 @@ const ESignSession     = require('./models/ESignSession');
 const PersonalDocument = require('./models/PersonalDocument');
 const QRCode = require('qrcode');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const puppeteer = require('puppeteer');
+
+// ── Shared headless browser untuk render PDF (preview == download) ──
+let _pdfBrowser = null;
+async function getPdfBrowser() {
+  if (_pdfBrowser && _pdfBrowser.isConnected && _pdfBrowser.isConnected()) return _pdfBrowser;
+  _pdfBrowser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+  });
+  return _pdfBrowser;
+}
+
+// Render sebuah EJS view (dengan data) menjadi PDF A4 buffer
+function renderViewToPdf(app, view, data) {
+  return new Promise((resolve, reject) => {
+    app.render(view, data, async (err, html) => {
+      if (err) return reject(err);
+      let page;
+      try {
+        const browser = await getPdfBrowser();
+        page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+        const pdf = await page.pdf({
+          format: 'A4', printBackground: true, preferCSSPageSize: true,
+          margin: { top: '0mm', bottom: '0mm', left: '0mm', right: '0mm' }
+        });
+        resolve(pdf);
+      } catch (e) { reject(e); }
+      finally { if (page) { try { await page.close(); } catch {} } }
+    });
+  });
+}
 const { groupUsersByDir } = require('./lib/userGroups');
 
 const app = express();
@@ -1151,6 +1184,52 @@ app.get('/email/:id/preview', requireAuth, async (req, res) => {
       currentUser: req.user, users, formatDate, ...counts
     });
   } catch (err) { console.error(err); res.redirect('/inbox'); }
+});
+
+// Download PDF — render server-side (Puppeteer) supaya hasilnya identik dengan preview
+app.get('/email/:id/pdf', requireAuth, async (req, res) => {
+  try {
+    const email = await Email.findById(req.params.id);
+    if (!email) return res.status(404).send('Surat tidak ditemukan');
+    const uid = req.user._id.toString();
+    const isSender = email.from.userId?.toString() === uid;
+    const isOwner  = email.ownerUserId?.toString() === uid;
+    const isReceiver = email.to.some(t => t.userId?.toString() === uid)
+                    || email.cc.some(t => t.userId?.toString() === uid);
+    const isPrivileged = ['superadmin','admin','direktur'].includes(req.user.role);
+    const isDisposisi  = email.disposisi?.some(d => d.userId?.toString() === uid);
+
+    const docSig = await DocumentSignature.findOne({ emailId: email._id });
+    const isPendingCosigner = docSig?.signers.some(
+      s => s.userId.toString() === uid && s.status === 'pending'
+    );
+    if (!isSender && !isOwner && !isReceiver && !isPrivileged && !isDisposisi && !isPendingCosigner) {
+      return res.status(403).send('Tidak punya akses');
+    }
+
+    const [users, counts] = await Promise.all([
+      User.find({ isActive: true }, 'name email role organization jabatan kodeDir _id').sort({ name: 1 }),
+      getMailCounts(req.user._id)
+    ]);
+
+    const baseHref = process.env.APP_URL || `http://localhost:${process.env.PORT || 3005}`;
+    const pdf = await renderViewToPdf(app, 'email-preview', {
+      title: 'Preview & Tanda Tangan', email,
+      docSig: docSig || { signers: [] },
+      isSender, isOwner, isPendingCosigner,
+      currentUser: req.user, users, formatDate, baseHref, ...counts
+    });
+
+    const safe = (email.subject || 'surat').replace(/[^\w\d\-_. ]+/g, '').trim() || 'surat';
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${safe}.pdf"`
+    });
+    res.send(pdf);
+  } catch (err) {
+    console.error('PDF render error:', err);
+    res.status(500).send('Gagal membuat PDF');
+  }
 });
 
 // Tambah diri sendiri — langsung generate QR
