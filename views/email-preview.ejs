@@ -356,6 +356,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
           ? email.to.map(r=>r.name)
           : (email.toExternal||[]).map(r=>r.name);
         const hasBody = email.body && email.body.trim() && email.body.trim() !== '<p><br></p>';
+        // Jika sudah ada QR stamp (tanda tangan elektronik), jangan cetak nama bawaan body —
+        // QR stamp sudah menjadi tanda tangannya. Mencegah QR menimpa nama bawaan.
+        const hasSigners = !!(docSig && docSig.signers && docSig.signers.length > 0);
       %>
 
       <% if (tipe === 'Memo') { %>
@@ -405,8 +408,10 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         <div class="naskah-sign naskah-sign-right">
           <div><%= sd.ttdKota || 'Tangerang' %>, <%= sd.ttdTanggal ? fmtDateSimple(sd.ttdTanggal) : fmtDate(email.createdAt) %></div>
           <% if (sd.ttdJabatan) { %><div><%= sd.ttdJabatan %></div><% } %>
+          <% if (!hasSigners) { %>
           <div class="naskah-sign-gap"></div>
           <div class="naskah-sign-name"><%= email.from.name %></div>
+          <% } %>
         </div>
       </div>
 
@@ -444,8 +449,10 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         <!-- Blok tanda tangan rata kiri -->
         <div class="naskah-sign naskah-sign-left">
           <% if (sd.ttdJabatan) { %><div><%= sd.ttdJabatan %></div><% } %>
+          <% if (!hasSigners) { %>
           <div class="naskah-sign-gap"></div>
           <div class="naskah-sign-name"><%= email.from.name %></div>
+          <% } %>
         </div>
         <% if (sd.esignNote !== false) { %>
         <p class="bsre-note">Dokumen ini telah ditandatangani secara elektronik menggunakan sertifikat elektronik yang diterbitkan oleh Balai Sertifikasi Elektronik (BSrE), Badan Siber dan Sandi Negara</p>
