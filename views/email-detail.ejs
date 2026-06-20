@@ -180,8 +180,13 @@ document.getElementById('adminDeleteOverlay').addEventListener('click', function
           <%- email.body || '<em style="color:var(--gray-400);">Tidak ada isi surat.</em>' %>
         </div>
 
-        <% if (email.lampiran) {
-          const lamExt = (email.lampiranNama || email.lampiran).split('.').pop().toLowerCase();
+        <%
+          const lampiranAll = (email.lampiranList && email.lampiranList.length)
+            ? email.lampiranList
+            : (email.lampiran ? [{ path: email.lampiran, nama: email.lampiranNama }] : []);
+        %>
+        <% lampiranAll.forEach(function(lam){
+          const lamExt = (lam.nama || lam.path).split('.').pop().toLowerCase();
           const isImg  = ['jpg','jpeg','png','gif','webp'].includes(lamExt);
           const isPdf  = lamExt === 'pdf';
         %>
@@ -189,12 +194,12 @@ document.getElementById('adminDeleteOverlay').addEventListener('click', function
           <!-- Header bar -->
           <div style="padding:10px 14px;background:#f8faff;display:flex;align-items:center;gap:10px;">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M13 2H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7l-4-5z" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round"/><path d="M13 2v5h5" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <div style="flex:1;font-size:13px;color:var(--gray-700);"><strong>Lampiran:</strong> <%= email.lampiranNama || 'File terlampir' %></div>
-            <a href="<%= email.lampiran %>" target="_blank" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">
+            <div style="flex:1;font-size:13px;color:var(--gray-700);"><strong>Lampiran:</strong> <%= lam.nama || 'File terlampir' %></div>
+            <a href="<%= lam.path %>" target="_blank" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">
               <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M10 3v10M5 9l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 17h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               Unduh
             </a>
-            <a href="<%= email.lampiran %>" target="_blank" class="btn btn-primary" style="padding:4px 12px;font-size:12px;">
+            <a href="<%= lam.path %>" target="_blank" class="btn btn-primary" style="padding:4px 12px;font-size:12px;">
               <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M3 10s2-5 7-5 7 5 7 5-2 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
               Lihat
             </a>
@@ -202,17 +207,17 @@ document.getElementById('adminDeleteOverlay').addEventListener('click', function
           <!-- Preview inline -->
           <% if (isImg) { %>
           <div style="padding:12px;background:#fff;text-align:center;">
-            <img src="<%= email.lampiran %>" alt="<%= email.lampiranNama %>"
+            <img src="<%= lam.path %>" alt="<%= lam.nama %>"
               style="max-width:100%;max-height:500px;border-radius:6px;object-fit:contain;cursor:pointer;"
               onclick="window.open(this.src,'_blank')">
           </div>
           <% } else if (isPdf) { %>
           <div style="background:#fff;">
-            <iframe src="<%= email.lampiran %>" style="width:100%;height:480px;border:none;" title="<%= email.lampiranNama %>"></iframe>
+            <iframe src="<%= lam.path %>" style="width:100%;height:480px;border:none;" title="<%= lam.nama %>"></iframe>
           </div>
           <% } %>
         </div>
-        <% } %>
+        <% }) %>
       </div>
     </div>
 

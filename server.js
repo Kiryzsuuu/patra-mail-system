@@ -932,7 +932,7 @@ function buildNomorSurat(seq, tipeSurat, kodeDir, jenis, roman, year) {
 }
 
 // Manajemen Dokumen — Overview
-app.get('/compose', requireAuth, async (req, res) => {
+app.get('/compose', requireAuth, requireAdmin, async (req, res) => {
   try {
     const counts = await getMailCounts(req.user._id);
     const { q, tipe, status } = req.query;
@@ -1051,7 +1051,7 @@ app.get('/compose/new', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/compose', requireAuth, lampiranUpload.single('lampiran'), async (req, res) => {
+app.post('/compose', requireAuth, lampiranUpload.array('lampiran', 10), async (req, res) => {
   const { to, cc, subject, body, tag, berkas, action, sifat, jenis, externalRecipients,
           tipeSurat, suratData, kodeDiv, kodeLay, sumberTemplate, pengirimResmi, kodeDir } = req.body;
   try {
@@ -1134,8 +1134,9 @@ app.post('/compose', requireAuth, lampiranUpload.single('lampiran'), async (req,
       kodeLay:        kodeLay || 'INT',
       suratData:      parsedSuratData,
       nomorSurat,
-      lampiran:       req.file ? '/uploads/' + req.file.filename : '',
-      lampiranNama:   req.file ? req.file.originalname : '',
+      lampiran:       (req.files && req.files[0]) ? '/uploads/' + req.files[0].filename : '',
+      lampiranNama:   (req.files && req.files[0]) ? req.files[0].originalname : '',
+      lampiranList:   (req.files || []).map(f => ({ path: '/uploads/' + f.filename, nama: f.originalname })),
       status:         'draft',
       ownerUserId,
       builtBy
@@ -1460,11 +1461,14 @@ app.post('/email/:id/send', requireAuth, async (req, res) => {
         subject: `[${email.nomorSurat}] ${email.subject}`,
         html: htmlBody
       };
-      if (email.lampiran) {
-        mailOptions.attachments = [{
-          filename: email.lampiranNama || path.basename(email.lampiran),
-          path: path.join(__dirname, email.lampiran)
-        }];
+      const lampiranAll = (email.lampiranList && email.lampiranList.length)
+        ? email.lampiranList
+        : (email.lampiran ? [{ path: email.lampiran, nama: email.lampiranNama }] : []);
+      if (lampiranAll.length) {
+        mailOptions.attachments = lampiranAll.map(l => ({
+          filename: l.nama || path.basename(l.path),
+          path: path.join(__dirname, l.path)
+        }));
       }
       await transporter.sendMail(mailOptions);
     }

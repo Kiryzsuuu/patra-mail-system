@@ -27,9 +27,13 @@
         <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Nama Perusahaan <span style="color:red;">*</span></label>
         <input type="text" id="f_nama" class="form-control" placeholder="PT Contoh Perusahaan" required>
       </div>
-      <div style="margin-bottom:20px;">
+      <div style="margin-bottom:14px;">
         <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Email Utama</label>
         <input type="email" id="f_email" class="form-control" placeholder="info@perusahaan.com">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Alamat</label>
+        <textarea id="f_alamat" class="form-control" rows="3" placeholder="Alamat lengkap perusahaan"></textarea>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:10px;">
         <button type="button" onclick="closeModal()" class="btn btn-secondary">Batal</button>
@@ -94,8 +98,9 @@ function openModal(data) {
   document.body.style.overflow = 'hidden';
   document.getElementById('editId').value = '';
   document.getElementById('modalTitle').textContent = 'Tambah Perusahaan';
-  document.getElementById('f_nama').value  = data ? (data.nama  || '') : '';
-  document.getElementById('f_email').value = data ? (data.email || '') : '';
+  document.getElementById('f_nama').value   = data ? (data.nama   || '') : '';
+  document.getElementById('f_email').value  = data ? (data.email  || '') : '';
+  document.getElementById('f_alamat').value = data ? (data.alamat || '') : '';
   if (data && data._id) {
     document.getElementById('editId').value = data._id;
     document.getElementById('modalTitle').textContent = 'Edit Perusahaan';
@@ -111,19 +116,20 @@ async function submitPerusahaan(e) {
   const editId = document.getElementById('editId').value;
   const nama   = document.getElementById('f_nama').value;
   const email  = document.getElementById('f_email').value;
+  const alamat = document.getElementById('f_alamat').value;
 
   if (editId) {
     const r = await fetch('/perusahaan/' + editId, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ nama, email })
+      body: new URLSearchParams({ nama, email, alamat })
     });
     const j = await r.json();
     if (j.ok) location.reload(); else alert('Gagal menyimpan.');
   } else {
     const form = document.createElement('form');
     form.method = 'POST'; form.action = '/perusahaan';
-    [['nama', nama], ['email', email]].forEach(([k, v]) => {
+    [['nama', nama], ['email', email], ['alamat', alamat]].forEach(([k, v]) => {
       const i = document.createElement('input'); i.type='hidden'; i.name=k; i.value=v; form.appendChild(i);
     });
     document.body.appendChild(form); form.submit();

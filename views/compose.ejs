@@ -356,30 +356,6 @@ details.cgroup > .cgroup-body { padding:16px; }
         <div id="butirList"></div>
         <button type="button" class="btn-add-row" onclick="addButir()">+ Tambah Butir</button>
 
-        <!-- Blok tanda tangan -->
-        <details class="cgroup" style="margin-top:12px;">
-          <summary>Detail Tanda Tangan <span class="cgroup-hint">(Kota, Tanggal, Jabatan — opsional)</span></summary>
-          <div class="cgroup-body">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
-              <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Kota TTD</label>
-                <input type="text" id="naskah_ttd_kota" class="form-control" placeholder="cth: Tangerang" value="Tangerang">
-              </div>
-              <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Tanggal TTD</label>
-                <input type="date" id="naskah_ttd_tanggal" class="form-control">
-              </div>
-              <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Jabatan Penandatangan</label>
-                <input type="text" id="naskah_ttd_jabatan" class="form-control" placeholder="cth: EVP of Safety Operation">
-              </div>
-            </div>
-          </div>
-        </details>
-        <label class="cosign-toggle" id="naskah-bsre-wrap" style="display:none;margin-top:4px;">
-          <input type="checkbox" id="naskah_bsre" checked>
-          Tampilkan catatan tanda tangan elektronik (BSrE) di kaki surat
-        </label>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════ -->
@@ -1005,16 +981,15 @@ details.cgroup > .cgroup-body { padding:16px; }
       <!-- EKSTERNAL section -->
       <div id="eksternalSection" style="display:none;">
         <div class="form-group">
-          <label class="form-label">Penerima (Perusahaan)</label>
+          <label class="form-label">Penerima (Perusahaan) <span class="req">*</span></label>
           <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-            <select id="perusahaanPicker" class="form-control form-select" style="flex:1;">
-              <option value="">— Pilih perusahaan dari daftar —</option>
+            <select id="perusahaanPicker" class="form-control form-select" style="flex:1;" onchange="selectExt(this.value)">
+              <option value="">— Pilih satu perusahaan —</option>
             </select>
-            <button type="button" class="btn btn-secondary" onclick="addExt()" style="white-space:nowrap;padding:8px 16px;">+ Tambah</button>
             <a href="/perusahaan" target="_blank" style="font-size:12px;color:var(--brand-600);white-space:nowrap;">Kelola</a>
           </div>
           <div class="ext-list" id="extList"></div>
-          <div id="extEmpty" style="font-size:12.5px;color:var(--gray-400);padding:6px 0;">Belum ada penerima. Pilih perusahaan dari daftar lalu klik + Tambah.</div>
+          <div id="extEmpty" style="font-size:12.5px;color:var(--gray-400);padding:6px 0;">Belum ada penerima. Pilih satu perusahaan dari daftar.</div>
         </div>
       </div>
 
@@ -1030,9 +1005,10 @@ details.cgroup > .cgroup-body { padding:16px; }
 
       <!-- LAMPIRAN -->
       <details class="cgroup">
-        <summary>Lampiran <span class="cgroup-hint">(opsional — PDF, Word, Gambar, maks. 10MB)</span></summary>
+        <summary>Lampiran <span class="cgroup-hint">(opsional — bisa lebih dari 1, PDF/Word/Gambar, maks. 10MB/file)</span></summary>
         <div class="cgroup-body">
-          <input type="file" name="lampiran" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif" style="padding:6px 10px;font-size:13px;">
+          <input type="file" name="lampiran" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif" multiple style="padding:6px 10px;font-size:13px;">
+          <small class="form-hint">Bisa pilih beberapa file sekaligus (tahan Ctrl/Shift saat memilih).</small>
         </div>
       </details>
       </div><!-- /mainFormSections -->
@@ -1400,18 +1376,19 @@ function setJenis(j) {
 
 // ── EXTERNAL RECIPIENTS ──
 let extList = [];
-function addExt() {
-  const sel = document.getElementById('perusahaanPicker');
-  const id = sel ? sel.value : '';
-  if (!id) { alert('Pilih perusahaan dari daftar terlebih dahulu.'); return; }
+// Penerima eksternal: hanya SATU perusahaan
+function selectExt(id) {
+  if (!id) { extList = []; renderExtList(); return; }
   const p = _perusahaanData.find(x => x._id === id);
   if (!p) return;
-  if (extList.find(r => r.perusahaanId === id)) { alert('Perusahaan sudah ditambahkan.'); return; }
-  extList.push({ perusahaanId: id, name: p.nama, email: p.email || '' });
+  extList = [{ perusahaanId: id, name: p.nama, email: p.email || '', alamat: p.alamat || '' }];
   renderExtList();
-  sel.value = '';
 }
-function removeExt(id) { extList = extList.filter(r => r.perusahaanId !== id); renderExtList(); }
+function removeExt(id) {
+  extList = [];
+  const sel = document.getElementById('perusahaanPicker'); if (sel) sel.value = '';
+  renderExtList();
+}
 function renderExtList() {
   const list = document.getElementById('extList');
   const empty = document.getElementById('extEmpty');
