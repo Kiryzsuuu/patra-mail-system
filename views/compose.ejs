@@ -59,6 +59,11 @@
 .btn-add-row { margin-top:6px; font-size:12px; padding:5px 12px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:6px; cursor:pointer; color:var(--gray-600); }
 .btn-add-row:hover { background:var(--gray-100); }
 
+/* Spasi internal seksi konsisten (hilangkan kesan berantakan) */
+#sec-memo, #sec-naskah { display:flex; flex-direction:column; gap:14px; }
+#sec-memo .sec-header, #sec-naskah .sec-header { margin-bottom:0; }
+#sec-memo .form-label, #sec-naskah .form-label { margin-bottom:2px; }
+
 /* Seksi lipat (collapsible) untuk merapikan form yang panjang */
 details.cgroup { border:1px solid var(--gray-200); border-radius:8px; margin-bottom:10px; overflow:hidden; }
 details.cgroup > summary { list-style:none; cursor:pointer; padding:10px 14px; background:var(--gray-50); font-size:13px; font-weight:600; color:var(--gray-700); display:flex; align-items:center; gap:8px; }
@@ -100,13 +105,6 @@ details.cgroup > .cgroup-body { padding:14px; border-top:1px solid var(--gray-20
           <input type="checkbox" name="sumberTemplateCheck" id="sumberTemplateCheck" onchange="toggleSumberTemplate(this.checked)" style="width:14px;height:14px;">
           Template Eksternal
         </label>
-        <span style="font-size:12px;color:var(--gray-400);">Sifat:</span>
-        <select id="sifatSelect" class="admin-role-select" style="padding:5px 24px 5px 10px;font-size:12.5px;" onchange="updateSifat(this)">
-          <% if(allowedSifat.includes('Biasa/Terbuka')){ %><option value="Biasa/Terbuka">Biasa / Terbuka</option><% } %>
-          <% if(allowedSifat.includes('Segera')){ %><option value="Segera">Segera</option><% } %>
-          <% if(allowedSifat.includes('Terbatas')){ %><option value="Terbatas">Terbatas</option><% } %>
-          <% if(allowedSifat.includes('Rahasia')){ %><option value="Rahasia">Rahasia</option><% } %>
-        </select>
       </div>
     </div>
     <input type="hidden" name="sumberTemplate" id="sumberTemplateHidden" value="internal">
