@@ -1,0 +1,19 @@
+<% signers.forEach(function(s){
+  const rl = { admin:'Administrator', direktur:'Direktur', user:'Pengguna' };
+  const jb = s.jabatanDisplay || (s.userRole ? rl[s.userRole]||s.userRole : (s.userOrg||''));
+  const lok = s.lokasiTtd || (sd && sd.ttdKota) || 'Tangerang';
+  const dt  = s.tanggalTtd ? fmtDateSimple(s.tanggalTtd)
+            : (sd && sd.ttdTanggal ? fmtDateSimple(sd.ttdTanggal) : fmtDate(email.createdAt));
+  const w = (s.position && s.position.width) ? s.position.width : 120;
+%>
+  <div class="sign-col">
+    <% if (s.showDate !== false) { %><div class="sign-date"><%= lok %>, <%= dt %></div><% } %>
+    <% if (s.qrDataUrl) { %>
+      <img class="sign-qr" src="<%= s.qrDataUrl %>" alt="QR" style="width:<%= w %>px;height:<%= w %>px;">
+    <% } else { %>
+      <div class="naskah-sign-gap"></div>
+    <% } %>
+    <div class="naskah-sign-name"><%= s.userName %></div>
+    <% if (jb) { %><div class="sign-role"><%= jb %></div><% } %>
+  </div>
+<% }) %>

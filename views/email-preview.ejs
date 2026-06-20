@@ -126,6 +126,14 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
 .naskah-sign-left { text-align: left; }
 .naskah-sign .naskah-sign-gap { height: 64px; }
 .naskah-sign .naskah-sign-name { font-weight: bold; text-decoration: underline; }
+/* Tanda tangan inline: QR di atas nama, dalam alur dokumen (tidak melayang, tidak nimpa) */
+.sign-row { display: flex; gap: 40px; margin-top: 4px; }
+.naskah-sign-right .sign-row { justify-content: flex-end; }
+.naskah-sign-left  .sign-row { justify-content: flex-start; }
+.sign-col { text-align: center; }
+.sign-date { font-size: 11pt; margin-bottom: 6px; white-space: nowrap; }
+.sign-qr { display: block; margin: 0 auto 4px; }
+.sign-role { font-size: 9.5pt; margin-top: 1px; }
 .bsre-note { margin-top: 30px; text-align: center; font-style: italic; font-size: 9pt; color: #333; line-height: 1.4; }
 
 /* Standard info table */
@@ -411,11 +419,13 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
 
         <!-- Blok tanda tangan rata kanan -->
         <div class="naskah-sign naskah-sign-right">
-          <div><%= sd.ttdKota || 'Tangerang' %>, <%= sd.ttdTanggal ? fmtDateSimple(sd.ttdTanggal) : fmtDate(email.createdAt) %></div>
-          <% if (sd.ttdJabatan) { %><div><%= sd.ttdJabatan %></div><% } %>
-          <% if (!hasSigners) { %>
-          <div class="naskah-sign-gap"></div>
-          <div class="naskah-sign-name"><%= email.from.name %></div>
+          <% if (hasSigners) { %>
+            <div class="sign-row"><%- include('./partials/sig-inline', { signers: docSig.signers, sd, email, fmtDate, fmtDateSimple }) %></div>
+          <% } else { %>
+            <div><%= sd.ttdKota || 'Tangerang' %>, <%= sd.ttdTanggal ? fmtDateSimple(sd.ttdTanggal) : fmtDate(email.createdAt) %></div>
+            <% if (sd.ttdJabatan) { %><div><%= sd.ttdJabatan %></div><% } %>
+            <div class="naskah-sign-gap"></div>
+            <div class="naskah-sign-name"><%= email.from.name %></div>
           <% } %>
         </div>
       </div>
@@ -453,10 +463,12 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
 
         <!-- Blok tanda tangan rata kiri -->
         <div class="naskah-sign naskah-sign-left">
-          <% if (sd.ttdJabatan) { %><div><%= sd.ttdJabatan %></div><% } %>
-          <% if (!hasSigners) { %>
-          <div class="naskah-sign-gap"></div>
-          <div class="naskah-sign-name"><%= email.from.name %></div>
+          <% if (hasSigners) { %>
+            <div class="sign-row"><%- include('./partials/sig-inline', { signers: docSig.signers, sd, email, fmtDate, fmtDateSimple }) %></div>
+          <% } else { %>
+            <% if (sd.ttdJabatan) { %><div><%= sd.ttdJabatan %></div><% } %>
+            <div class="naskah-sign-gap"></div>
+            <div class="naskah-sign-name"><%= email.from.name %></div>
           <% } %>
         </div>
         <% if (sd.esignNote !== false) { %>
@@ -1061,7 +1073,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         </div>
       </div>
 
-      <!-- QR Stamps -->
+      <!-- QR Stamps (melayang) — hanya untuk tipe yang BELUM punya blok tanda tangan inline -->
+      <% const inlineSignTipes = ['Nota Dinas', 'Surat Eksternal']; %>
+      <% if (!inlineSignTipes.includes(tipe)) { %>
       <% docSig.signers.forEach(function(s) {
         const rl = { admin:'Administrator', direktur:'Direktur', user:'Pengguna' };
         const jabatan = s.jabatanDisplay || (s.userRole ? rl[s.userRole]||s.userRole : (s.userOrg||''));
@@ -1096,6 +1110,7 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         </button>
       </div>
       <% }) %>
+      <% } %>
 
       <!-- FOOTER RESMI INSPIRA -->
       <img src="/img/inspira_footer.png" class="doc-footer-banner" alt="">
@@ -1333,20 +1348,8 @@ async function addSelf() {
     });
     const data = await res.json();
     if (data.ok) {
-      if (data.action === 'updated') {
-        const stamp = document.getElementById('stamp-' + data.signer._id);
-        if (stamp) {
-          const w = stamp.offsetWidth;
-          const img = stamp.querySelector('img');
-          if (img) img.src = data.signer.qrDataUrl;
-          const wait = stamp.querySelector('.qr-wait');
-          if (wait) { const newImg = document.createElement('img'); newImg.src = data.signer.qrDataUrl; newImg.draggable = false; newImg.style.width = w + 'px'; newImg.style.height = w + 'px'; wait.replaceWith(newImg); }
-        }
-      } else {
-        addStampToPage(data.signer);
-        addSignerToPanel(data.signer);
-      }
-      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 10l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Sudah Ditandatangani`;
+      location.reload();   // muat ulang supaya blok tanda tangan ter-render dari server
+      return;
     } else {
       await showAlert(data.message || 'Gagal menambahkan tanda tangan.', { title: 'Gagal', type: 'warn' });
       btn.disabled = false;
@@ -1458,18 +1461,14 @@ async function setDisplayMode(id, mode, row) {
   });
 }
 
-function toggleDate(id, btn) {
-  const stamp = document.getElementById('stamp-' + id);
-  if (!stamp) return;
-  const isOn = stamp.dataset.showDate !== '0';
-  const newShow = !isOn;
-  stamp.dataset.showDate = newShow ? '1' : '0';
+async function toggleDate(id, btn) {
+  const newShow = !btn.classList.contains('active');
   btn.classList.toggle('active', newShow);
-  rebuildStamp(id);
-  fetch(`/email/${EMAIL_ID}/sign/update-lokasi-tanggal`, {
+  await fetch(`/email/${EMAIL_ID}/sign/update-lokasi-tanggal`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ signerId: id, showDate: newShow })
   });
+  location.reload();
 }
 
 // ── JABATAN EDIT ──
@@ -1485,10 +1484,7 @@ async function inviteCosigner() {
     });
     const data = await res.json();
     if (data.ok) {
-      addStampToPage(data.signer);
-      addSignerToPanel(data.signer);
-      sel.querySelector(`option[value="${sel.value}"]`)?.remove();
-      sel.value = '';
+      location.reload();
     } else {
       await showAlert(data.message || 'Gagal mengundang co-signer.', { title: 'Gagal', type: 'warn' });
     }
@@ -1579,21 +1575,7 @@ async function removeSigner(id, e) {
   if (!await showConfirm('Hapus penandatangan ini dari dokumen?', { title:'Hapus Penandatangan', type:'danger', confirmLabel:'Hapus' })) return;
   const res  = await fetch(`/email/${EMAIL_ID}/sign/signers/${id}`, { method:'DELETE' });
   const data = await res.json();
-  if (data.ok) {
-    document.getElementById(`stamp-${id}`)?.remove();
-    document.getElementById(`si-${id}`)?.remove();
-    const cnt = document.getElementById('signerCount');
-    cnt.textContent = Math.max(0, parseInt(cnt.textContent)-1);
-    if (!document.querySelector('.signer-item')) {
-      const e2 = document.createElement('div'); e2.className='empty-signers'; e2.id='emptySig'; e2.textContent='Belum ada penandatangan.';
-      document.getElementById('signerList').appendChild(e2);
-      document.getElementById('sigHint').style.display='';
-    }
-    if (data.wasCurrentUser) {
-      const b = document.getElementById('btnAddSelf');
-      if(b){ b.disabled=false; b.innerHTML=`<svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Tambah Tanda Tangan Saya`; }
-    }
-  }
+  if (data.ok) { location.reload(); }
 }
 
 async function downloadPdf() {
