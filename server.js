@@ -1331,10 +1331,12 @@ app.post('/email/:id/sign/invite-cosigner', requireAuth, async (req, res) => {
 
 app.post('/email/:id/sign/update-position', requireAuth, async (req, res) => {
   try {
-    const { signerId, x, y, width, height } = req.body;
+    const { signerId, x, y, width, height, locked } = req.body;
+    const set = { 'signers.$.position': { x, y, width, height } };
+    if (locked !== undefined) set['signers.$.positionLocked'] = locked;
     await DocumentSignature.updateOne(
       { emailId: req.params.id, 'signers._id': signerId },
-      { $set: { 'signers.$.position': { x, y, width, height } } }
+      { $set: set }
     );
     res.json({ ok: true });
   } catch { res.json({ ok: false }); }

@@ -213,6 +213,11 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
 /* QR digambar pakai ukuran PIKSEL pasti (width & height inline di <img>) — tanpa persen,
    tanpa aspect-ratio, tanpa wrapper. Mesin cetak tidak bisa menolkan ukurannya. */
 .qr-stamp img { display: block; margin: 0 auto; }
+.qr-stamp.locked { cursor: default; }
+.qr-stamp.locked .qr-resize { display: none !important; }
+.lock-btn { width: 100%; margin-top: 10px; padding: 9px; border-radius: 7px; border: 1px solid #1a56a8; background: #1a56a8; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.lock-btn:hover { background: #1d63c0; }
+.lock-btn.locked { background: transparent; border-color: #22c55e; color: #22c55e; }
 .qr-wait { margin: 0 auto; border: 1px dashed #000; display: flex; align-items: center; justify-content: center; font-size: 8px; }
 .qr-stamp-sig { width: 90%; border-top: 1.5px solid #111; margin: 6px auto 3px; }
 .qr-stamp-name { font-size: 9.5px; font-weight: 700; color: #111; text-align: center; padding: 0 4px; line-height: 1.4; white-space: nowrap; }
@@ -1067,8 +1072,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         const stampDate   = s.tanggalTtd ? new Date(s.tanggalTtd) : new Date(email.createdAt);
         const stampDateStr = fmtDate(stampDate);
       %>
-      <div class="qr-stamp" id="stamp-<%= s._id %>" data-id="<%= s._id %>"
+      <div class="qr-stamp <%= s.positionLocked ? 'locked' : '' %>" id="stamp-<%= s._id %>" data-id="<%= s._id %>"
         data-dm="<%= dm %>"
+        data-locked="<%= s.positionLocked ? '1' : '0' %>"
         data-show-date="<%= s.showDate === false ? '0' : '1' %>"
         data-date-str="<%= stampDateStr %>"
         data-lokasi="<%= stampLokasi %>"
@@ -1213,6 +1219,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
             <div class="display-mode-row">
               <button type="button" class="dm-btn <%= s.showDate !== false ? 'active' : '' %>" id="btnDate-<%= s._id %>" onclick="toggleDate('<%= s._id %>',this)">Tanggal</button>
             </div>
+            <button type="button" class="lock-btn <%= s.positionLocked ? 'locked' : '' %>" id="lockBtn-<%= s._id %>" onclick="toggleLock('<%= s._id %>')">
+              <%= s.positionLocked ? 'Posisi Terkunci — Ubah' : 'Tetapkan Posisi' %>
+            </button>
           </div>
         </div>
         <% }) %>
@@ -1223,8 +1232,8 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
       <div style="font-size:11px;color:rgba(255,255,255,.25);line-height:1.9;">
         • Seret QR untuk pindahkan posisi<br>
         • Tarik sudut kanan bawah untuk resize<br>
+        • Klik <strong>Tetapkan Posisi</strong> untuk mengunci letak QR<br>
         • Pilih tampilan: QR saja / + Nama / + Jabatan<br>
-        • Setiap QR unik per surat &amp; penandatangan<br>
         • Scan QR = verifikasi dokumen + info surat
       </div>
     </div>
@@ -1248,6 +1257,7 @@ function initStamp(el) {
 
   // ── DRAG (stamp body) ──
   el.addEventListener('pointerdown', e => {
+    if (el.dataset.locked === '1') return;   // posisi terkunci → tidak bisa digeser
     if (e.target.classList.contains('qr-resize') || e.target.closest('.qr-delete')) return;
     e.preventDefault();
     el.setPointerCapture(e.pointerId);
@@ -1300,11 +1310,26 @@ function initStamp(el) {
 }
 document.querySelectorAll('.qr-stamp').forEach(initStamp);
 
-async function savePosition(id, el) {
+async function savePosition(id, el, locked) {
+  const body = { signerId:id, x:parseInt(el.style.left)||0, y:parseInt(el.style.top)||0, width:el.offsetWidth, height:el.offsetHeight };
+  if (locked !== undefined) body.locked = locked;
   await fetch(`/email/${EMAIL_ID}/sign/update-position`, {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ signerId:id, x:parseInt(el.style.left)||0, y:parseInt(el.style.top)||0, width:el.offsetWidth, height:el.offsetHeight })
+    body: JSON.stringify(body)
   });
+}
+
+// Tetapkan / buka kunci posisi QR
+async function toggleLock(id) {
+  const el  = document.getElementById('stamp-' + id);
+  const btn = document.getElementById('lockBtn-' + id);
+  if (!el || !btn) return;
+  const willLock = el.dataset.locked !== '1';
+  el.dataset.locked = willLock ? '1' : '0';
+  el.classList.toggle('locked', willLock);
+  btn.classList.toggle('locked', willLock);
+  btn.textContent = willLock ? 'Posisi Terkunci — Ubah' : 'Tetapkan Posisi';
+  await savePosition(id, el, willLock);
 }
 
 async function addSelf() {
@@ -1410,6 +1435,7 @@ function addSignerToPanel(s) {
       <div class="display-mode-row">
         <button type="button" class="dm-btn ${s.showDate !== false ? 'active' : ''}" id="btnDate-${s._id}" onclick="toggleDate('${s._id}',this)">Tanggal</button>
       </div>
+      <button type="button" class="lock-btn" id="lockBtn-${s._id}" onclick="toggleLock('${s._id}')">Tetapkan Posisi</button>
     </div>`;
   document.getElementById('signerList').appendChild(item);
   document.getElementById('signerCount').textContent = parseInt(document.getElementById('signerCount').textContent)+1;

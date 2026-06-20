@@ -17,6 +17,7 @@ const docSignerSchema = new mongoose.Schema({
     width:  { type: Number, default: 110 },
     height: { type: Number, default: 110 }
   },
+  positionLocked: { type: Boolean, default: false },
   lokasiTtd:  { type: String, default: '' },
   tanggalTtd: { type: Date },
   addedAt:  { type: Date, default: Date.now },
