@@ -210,7 +210,11 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
 }
 .qr-stamp-date { font-size: 11pt; font-family: 'Times New Roman', serif; color: #000; margin: 0 0 8px; white-space: nowrap; text-align: center; }
 .qr-stamp:hover, .qr-stamp.active { outline-color: #1a56a8; }
-.qr-stamp img { display: block; width: 100%; height: auto; object-fit: contain; }
+/* QR digambar di kotak padding-square: tinggi = lebar, tidak tergantung intrinsic/aspect-ratio.
+   Bulletproof di semua engine termasuk print Chromium. */
+.qr-box { position: relative; width: 100%; height: 0; padding-bottom: 100%; margin: 0 auto; }
+.qr-box img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.qr-box .qr-wait { position: absolute; inset: 0; border: 1px dashed #000; display: flex; align-items: center; justify-content: center; font-size: 8px; }
 .qr-stamp-sig { width: 90%; border-top: 1.5px solid #111; margin: 6px auto 3px; }
 .qr-stamp-name { font-size: 9.5px; font-weight: 700; color: #111; text-align: center; padding: 0 4px; line-height: 1.4; white-space: nowrap; }
 .qr-stamp-role { font-size: 8.5px; font-weight: 400; color: #111; text-align: center; padding: 1px 4px 3px; white-space: nowrap; }
@@ -274,7 +278,6 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
   .doc-meta { display: none !important; }
   .qr-resize, .qr-delete { display: none !important; }
   .qr-stamp { outline: none !important; cursor: default !important; height: auto !important; }
-  .qr-stamp img { flex: none !important; height: auto !important; }
 }
 </style>
 </head>
@@ -1068,9 +1071,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         <div class="qr-stamp-date"><%= stampLokasi %>, <%= stampDateStr %></div>
         <% } %>
         <% if (s.qrDataUrl) { %>
-        <img src="<%= s.qrDataUrl %>" alt="QR" draggable="false">
+        <div class="qr-box"><img src="<%= s.qrDataUrl %>" alt="QR" draggable="false"></div>
         <% } else { %>
-        <div style="flex:1;width:100%;min-height:0;border:1px dashed #000;display:flex;align-items:center;justify-content:center;font-size:8px;">Menunggu tanda tangan</div>
+        <div class="qr-box"><div class="qr-wait">Menunggu tanda tangan</div></div>
         <% } %>
         <% if (dm !== 'qr_only') { %>
         <div class="qr-stamp-sig"></div>
@@ -1308,9 +1311,9 @@ async function addSelf() {
       if (data.action === 'updated') {
         const stamp = document.getElementById('stamp-' + data.signer._id);
         if (stamp) {
-          const img = stamp.querySelector('img');
+          const img = stamp.querySelector('.qr-box img');
           if (img) img.src = data.signer.qrDataUrl;
-          const wait = stamp.querySelector('div[style*="border:1px dashed"]');
+          const wait = stamp.querySelector('.qr-box .qr-wait');
           if (wait) { const newImg = document.createElement('img'); newImg.src = data.signer.qrDataUrl; newImg.draggable = false; wait.replaceWith(newImg); }
         }
       } else {
@@ -1346,8 +1349,8 @@ function addStampToPage(s, dm) {
   const showRole = mode === 'full';
 
   const qrHtml = s.qrDataUrl
-    ? `<img src="${s.qrDataUrl}" draggable="false">`
-    : `<div style="flex:1;width:100%;min-height:0;border:1px dashed #000;display:flex;align-items:center;justify-content:center;font-size:8px;">Menunggu</div>`;
+    ? `<div class="qr-box"><img src="${s.qrDataUrl}" draggable="false"></div>`
+    : `<div class="qr-box"><div class="qr-wait">Menunggu</div></div>`;
   const dateHtml  = showDate ? `<div class="qr-stamp-date">${lokasi}, ${dateStr}</div>` : '';
   const nameHtml  = showName ? `<div class="qr-stamp-sig"></div><div class="qr-stamp-name">${s.userName}</div>` : '';
   const roleHtml  = showRole ? `<div class="qr-stamp-role">${jabatan}</div>` : '';
@@ -1406,9 +1409,8 @@ function addSignerToPanel(s) {
 function rebuildStamp(id) {
   const stamp = document.getElementById('stamp-' + id);
   if (!stamp) return;
-  const img = stamp.querySelector('img');
-  const noQr = stamp.querySelector('div[style*="border:1px"]');
-  const qrEl = img ? img.outerHTML : (noQr ? noQr.outerHTML : '');
+  const box = stamp.querySelector('.qr-box');
+  const qrEl = box ? box.outerHTML : '';
   const jabEl = document.getElementById('jlbl-' + id);
   const jabatan = jabEl ? jabEl.textContent : '';
   const nameEl = jabEl?.closest('.signer-item')?.querySelector('.signer-name');
