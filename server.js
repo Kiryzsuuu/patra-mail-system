@@ -484,27 +484,37 @@ app.get('/', requireAuth, (req, res) => res.redirect('/inbox'));
 
 app.get('/inbox', requireAuth, async (req, res) => {
   try {
+    const uid = req.user._id.toString();
     const mails = await Email.find({
-      'to.userId': req.user._id,
       status: 'sent',
-      deletedBy: { $ne: req.user._id }
+      deletedBy: { $ne: req.user._id },
+      $or: [
+        { 'to.userId': req.user._id },
+        { 'disposisi.userId': req.user._id },
+        { ownerUserId: req.user._id }
+      ]
     }).sort({ createdAt: -1 });
 
     const counts = await getMailCounts(req.user._id);
-    const formatted = mails.map(m => ({
-      _id: m._id,
-      id: m._id,
-      from: m.from.name,
-      subject: m.subject,
-      date: formatDate(m.createdAt),
-      dateISO: m.createdAt ? new Date(m.createdAt).toISOString().slice(0,10) : '',
-      tag: m.tag || 'Biasa',
-      berkas: m.berkas,
-      jenis: m.jenis || 'internal',
-      nomorSurat: m.nomorSurat || '-',
-      tipeSurat: m.tipeSurat || 'Surat',
-      read: m.readBy.some(id => id.toString() === req.user._id.toString())
-    }));
+    const formatted = mails.map(m => {
+      const isDisposisi = (m.disposisi || []).some(d => d.userId?.toString() === uid)
+        || (m.ownerUserId && m.ownerUserId.toString() === uid && !(m.to || []).some(t => t.userId?.toString() === uid));
+      return {
+        _id: m._id,
+        id: m._id,
+        from: m.from.name,
+        subject: m.subject,
+        date: formatDate(m.createdAt),
+        dateISO: m.createdAt ? new Date(m.createdAt).toISOString().slice(0,10) : '',
+        tag: m.tag || 'Biasa',
+        berkas: m.berkas,
+        jenis: m.jenis || 'internal',
+        nomorSurat: m.nomorSurat || '-',
+        tipeSurat: m.tipeSurat || 'Surat',
+        isDisposisi,
+        read: m.readBy.some(id => id.toString() === req.user._id.toString())
+      };
+    });
 
     res.render('inbox', { mails: formatted, active: 'inbox', title: 'Kotak Masuk', ...counts });
   } catch (err) {
@@ -1008,19 +1018,8 @@ app.get('/roster-dokumen', requireAuth, async (req, res) => {
   } catch (err) { console.error(err); res.redirect('/inbox'); }
 });
 
-// Dokumen Tersimpan — dokumen yang dibuat admin untuk user (ownerUserId = user)
-app.get('/dokumen-tersimpan', requireAuth, async (req, res) => {
-  try {
-    const counts = await getMailCounts(req.user._id);
-    const docs = await Email.find({
-      ownerUserId: req.user._id
-    }).sort({ createdAt: -1 }).lean();
-    res.render('dokumen-tersimpan', {
-      active: 'dokumen-tersimpan', title: 'Dokumen Tersimpan',
-      docs, formatDate, ...counts
-    });
-  } catch (err) { console.error(err); res.redirect('/inbox'); }
-});
+// Dokumen Tersimpan dihapus — sekarang muncul di Kotak Masuk dengan tanda "Disposisi"
+app.get('/dokumen-tersimpan', requireAuth, (req, res) => res.redirect('/inbox'));
 
 // Manajemen Dokumen — Form buat dokumen baru
 app.get('/compose/new', requireAuth, async (req, res) => {
@@ -1505,7 +1504,7 @@ app.get('/email/:id', requireAuth, async (req, res) => {
       title: email.subject, active: isSender ? 'sent' : 'inbox',
       email, docSig: docSigCheck || { signers: [] },
       isSender, isOwner, currentUser: req.user,
-      users: allUsers, direktorats,
+      users: allUsers.filter(u => u._id.toString() !== uid), direktorats,
       formatDate, formatDateTime, ...counts
     });
   } catch (err) { console.error(err); res.redirect('/inbox'); }
@@ -2877,7 +2876,7 @@ const arsipUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-const ARSIP_KATEGORI = ['Umum','Surat Masuk','Surat Keluar','Perjanjian','Laporan','Keuangan','SDM','Lainnya'];
+const ARSIP_KATEGORI = ['Umum','Surat Masuk','Surat Keluar','Eksternal','Perjanjian','Laporan','Keuangan','SDM','Lainnya'];
 
 app.get('/arsip', requireAuth, requireDirektur, async (req, res) => {
   try {
@@ -2902,7 +2901,7 @@ app.get('/arsip', requireAuth, requireDirektur, async (req, res) => {
 
 app.post('/arsip', requireAuth, requireDirektur, arsipUpload.single('lampiran'), async (req, res) => {
   try {
-    const { nomorArsip, judul, kategori, tanggal, keterangan, sumber } = req.body;
+    const { nomorArsip, judul, kategori, tanggal, keterangan, sumber, tertuju } = req.body;
     if (!judul || !tanggal) return res.redirect('/arsip?error=1');
     await Arsip.create({
       nomorArsip: nomorArsip?.trim() || '',
@@ -2911,6 +2910,7 @@ app.post('/arsip', requireAuth, requireDirektur, arsipUpload.single('lampiran'),
       tanggal: new Date(tanggal),
       keterangan: keterangan?.trim() || '',
       sumber: sumber?.trim() || '',
+      tertuju: tertuju?.trim() || '',
       lampiran: req.file ? '/uploads/arsip/' + req.file.filename : '',
       lampiranNama: req.file ? req.file.originalname : '',
       createdBy: { userId: req.user._id, name: req.user.name, email: req.user.email },
@@ -2918,6 +2918,33 @@ app.post('/arsip', requireAuth, requireDirektur, arsipUpload.single('lampiran'),
     await log(req, 'arsip_create', 'arsip', `Arsip "${judul}" ditambahkan oleh ${req.user.name}`);
     res.redirect('/arsip');
   } catch (err) { console.error(err); res.redirect('/arsip'); }
+});
+
+// Ambil data arsip (untuk form edit)
+app.get('/arsip/:id/json', requireAuth, requireDirektur, async (req, res) => {
+  try {
+    const doc = await Arsip.findById(req.params.id);
+    if (!doc) return res.json({ ok: false });
+    res.json({ ok: true, data: doc });
+  } catch { res.json({ ok: false }); }
+});
+
+// Edit arsip (termasuk tambah tertuju/disposisi)
+app.put('/arsip/:id', requireAuth, requireDirektur, async (req, res) => {
+  try {
+    const { nomorArsip, judul, kategori, tanggal, keterangan, sumber, tertuju } = req.body;
+    const update = {
+      nomorArsip: nomorArsip?.trim() || '',
+      kategori: kategori || 'Umum',
+      keterangan: keterangan?.trim() || '',
+      sumber: sumber?.trim() || '',
+      tertuju: tertuju?.trim() || '',
+    };
+    if (judul?.trim()) update.judul = judul.trim();
+    if (tanggal) update.tanggal = new Date(tanggal);
+    await Arsip.findByIdAndUpdate(req.params.id, update);
+    res.json({ ok: true });
+  } catch { res.json({ ok: false }); }
 });
 
 app.delete('/arsip/:id', requireAuth, async (req, res) => {

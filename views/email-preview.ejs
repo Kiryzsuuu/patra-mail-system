@@ -1147,7 +1147,7 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
       <% } %>
     </div>
 
-    <% if (isSender) { %>
+    <% if (isSender && email.jenis === 'eksternal') { %>
     <div class="panel-section">
       <div class="panel-title">Undang Co-Signer</div>
       <label class="cosign-toggle">

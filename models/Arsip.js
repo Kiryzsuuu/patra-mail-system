@@ -7,6 +7,7 @@ const arsipSchema = new mongoose.Schema({
   tanggal:     { type: Date, required: true },
   keterangan:  { type: String, default: '' },
   sumber:      { type: String, default: '' },
+  tertuju:     { type: String, default: '' },
   lampiran:    { type: String, default: '' },
   lampiranNama:{ type: String, default: '' },
   createdBy:   {
