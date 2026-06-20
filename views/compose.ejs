@@ -301,21 +301,23 @@ details.cgroup > .cgroup-body { padding:14px; border-top:1px solid var(--gray-20
           </div>
         </div>
         <!-- Nota Dinas: tabel anggaran -->
-        <div id="sec-nota-budget" style="display:none;">
-          <label class="form-label" style="margin-top:4px;">Rincian Anggaran / Biaya Operasional</label>
-          <table class="dyn-table" id="budgetTable">
-            <thead>
-              <tr>
-                <th style="width:40px;">No.</th>
-                <th>Uraian Kebutuhan</th>
-                <th style="width:160px;">Jumlah (Rp)</th>
-                <th style="width:36px;"></th>
-              </tr>
-            </thead>
-            <tbody id="budgetBody"></tbody>
-          </table>
-          <button type="button" class="btn-add-row" onclick="addBudgetRow()">+ Tambah Baris</button>
-        </div>
+        <details id="sec-nota-budget" class="cgroup" style="display:none;">
+          <summary>Rincian Anggaran / Biaya Operasional <span class="cgroup-hint">(opsional)</span></summary>
+          <div class="cgroup-body">
+            <table class="dyn-table" id="budgetTable">
+              <thead>
+                <tr>
+                  <th style="width:40px;">No.</th>
+                  <th>Uraian Kebutuhan</th>
+                  <th style="width:160px;">Jumlah (Rp)</th>
+                  <th style="width:36px;"></th>
+                </tr>
+              </thead>
+              <tbody id="budgetBody"></tbody>
+            </table>
+            <button type="button" class="btn-add-row" onclick="addBudgetRow()">+ Tambah Baris</button>
+          </div>
+        </details>
       </div>
 
       <!-- ═══════════════════════════════════════════════════════ -->
@@ -354,20 +356,25 @@ details.cgroup > .cgroup-body { padding:14px; border-top:1px solid var(--gray-20
         <button type="button" class="btn-add-row" onclick="addButir()">+ Tambah Butir</button>
 
         <!-- Blok tanda tangan -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px;">
-          <div class="form-group">
-            <label class="form-label">Kota TTD</label>
-            <input type="text" id="naskah_ttd_kota" class="form-control" placeholder="cth: Tangerang" value="Tangerang">
+        <details class="cgroup" style="margin-top:12px;">
+          <summary>Detail Tanda Tangan <span class="cgroup-hint">(Kota, Tanggal, Jabatan — opsional)</span></summary>
+          <div class="cgroup-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Kota TTD</label>
+                <input type="text" id="naskah_ttd_kota" class="form-control" placeholder="cth: Tangerang" value="Tangerang">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Tanggal TTD</label>
+                <input type="date" id="naskah_ttd_tanggal" class="form-control">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Jabatan Penandatangan</label>
+                <input type="text" id="naskah_ttd_jabatan" class="form-control" placeholder="cth: EVP of Safety Operation">
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Tanggal TTD</label>
-            <input type="date" id="naskah_ttd_tanggal" class="form-control">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Jabatan Penandatangan</label>
-            <input type="text" id="naskah_ttd_jabatan" class="form-control" placeholder="cth: EVP of Safety Operation">
-          </div>
-        </div>
+        </details>
         <label class="cosign-toggle" id="naskah-bsre-wrap" style="display:none;margin-top:4px;">
           <input type="checkbox" id="naskah_bsre" checked>
           Tampilkan catatan tanda tangan elektronik (BSrE) di kaki surat
