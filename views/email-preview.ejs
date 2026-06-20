@@ -361,9 +361,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
           ? email.to.map(r=>r.name)
           : (email.toExternal||[]).map(r=>r.name);
         const hasBody = email.body && email.body.trim() && email.body.trim() !== '<p><br></p>';
-        // Matikan nama bawaan body HANYA bila ada QR stamp yang sudah menampilkan namanya sendiri
-        // (mode bukan 'qr_only'). Kalau stamp 'QR Saja', nama bawaan tetap dicetak supaya nama tak hilang.
-        const hasSigners = !!(docSig && docSig.signers && docSig.signers.some(s => (s.displayMode || 'full') !== 'qr_only'));
+        // Selalu matikan nama bawaan body bila ada QR stamp — nama sudah menyatu di stamp (di bawah QR),
+        // jadi tidak ada nama terpisah yang bisa ketimpa QR.
+        const hasSigners = !!(docSig && docSig.signers && docSig.signers.length > 0);
       %>
 
       <% if (tipe === 'Memo') { %>
@@ -1087,11 +1087,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         <% } else { %>
         <div class="qr-wait" style="width:<%= s.position.width %>px;height:<%= s.position.width %>px;">Menunggu tanda tangan</div>
         <% } %>
-        <% if (dm !== 'qr_only') { %>
         <div class="qr-stamp-sig"></div>
         <div class="qr-stamp-name"><%= s.userName %></div>
-        <% if (dm === 'full') { %><div class="qr-stamp-role"><%= jabatan %></div><% } %>
-        <% } %>
+        <% if (jabatan) { %><div class="qr-stamp-role"><%= jabatan %></div><% } %>
         <div class="qr-resize"></div>
         <button class="qr-delete" onclick="removeSigner('<%= s._id %>',event)" title="Hapus tanda tangan">
           <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -1207,17 +1205,10 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
                 oninput="debounceTanggal('<%= s._id %>', this.value)">
             </div>
           </div>
-          <!-- Display mode toggle -->
+          <!-- Opsi tanda tangan -->
           <div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:4px;">Tampilan:</div>
-            <div class="display-mode-row" id="dm-<%= s._id %>">
-              <button type="button" class="dm-btn <%= dm==='full'?'active':'' %>" onclick="setDisplayMode('<%= s._id %>','full',this.closest('.display-mode-row'))">Semua</button>
-              <button type="button" class="dm-btn <%= dm==='name_only'?'active':'' %>" onclick="setDisplayMode('<%= s._id %>','name_only',this.closest('.display-mode-row'))">+Nama</button>
-              <button type="button" class="dm-btn <%= dm==='qr_only'?'active':'' %>" onclick="setDisplayMode('<%= s._id %>','qr_only',this.closest('.display-mode-row'))">QR Saja</button>
-            </div>
-            <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:6px;margin-bottom:4px;">Opsi:</div>
             <div class="display-mode-row">
-              <button type="button" class="dm-btn <%= s.showDate !== false ? 'active' : '' %>" id="btnDate-<%= s._id %>" onclick="toggleDate('<%= s._id %>',this)">Tanggal</button>
+              <button type="button" class="dm-btn <%= s.showDate !== false ? 'active' : '' %>" id="btnDate-<%= s._id %>" onclick="toggleDate('<%= s._id %>',this)">Tampilkan Tanggal</button>
             </div>
             <button type="button" class="lock-btn <%= s.positionLocked ? 'locked' : '' %>" id="lockBtn-<%= s._id %>" onclick="toggleLock('<%= s._id %>')">
               <%= s.positionLocked ? 'Posisi Terkunci — Ubah' : 'Tetapkan Posisi' %>
@@ -1232,8 +1223,8 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
       <div style="font-size:11px;color:rgba(255,255,255,.25);line-height:1.9;">
         • Seret QR untuk pindahkan posisi<br>
         • Tarik sudut kanan bawah untuk resize<br>
-        • Klik <strong>Tetapkan Posisi</strong> untuk mengunci letak QR<br>
-        • Pilih tampilan: QR saja / + Nama / + Jabatan<br>
+        • Klik <strong>Tetapkan Posisi</strong> untuk mengunci letak<br>
+        • QR + nama selalu menyatu (tidak akan saling timpa)<br>
         • Scan QR = verifikasi dokumen + info surat
       </div>
     </div>
@@ -1380,19 +1371,18 @@ function addStampToPage(s, dm) {
     : '<%= fmtDate(email.createdAt) %>';
   const lokasi   = s.lokasiTtd || 'Jakarta';
   const showDate = s.showDate !== false;
-  const showName = mode !== 'qr_only';
-  const showRole = mode === 'full';
 
   const qrHtml = s.qrDataUrl
     ? `<img src="${s.qrDataUrl}" draggable="false" style="width:${s.position.width}px;height:${s.position.width}px;">`
     : `<div class="qr-wait" style="width:${s.position.width}px;height:${s.position.width}px;">Menunggu</div>`;
   const dateHtml  = showDate ? `<div class="qr-stamp-date">${lokasi}, ${dateStr}</div>` : '';
-  const nameHtml  = showName ? `<div class="qr-stamp-sig"></div><div class="qr-stamp-name">${s.userName}</div>` : '';
-  const roleHtml  = showRole ? `<div class="qr-stamp-role">${jabatan}</div>` : '';
+  const nameHtml  = `<div class="qr-stamp-sig"></div><div class="qr-stamp-name">${s.userName}</div>`;
+  const roleHtml  = jabatan ? `<div class="qr-stamp-role">${jabatan}</div>` : '';
 
   const div = document.createElement('div');
   div.className = 'qr-stamp'; div.id = `stamp-${s._id}`; div.dataset.id = s._id;
   div.dataset.dm = mode;
+  div.dataset.locked = '0';
   div.dataset.lokasi  = lokasi;
   div.dataset.showDate = showDate ? '1' : '0';
   div.dataset.dateStr = dateStr;
@@ -1425,15 +1415,8 @@ function addSignerToPanel(s) {
     </div>
     <div style="font-size:11px;color:rgba(255,255,255,.35);padding:4px 0 0;">Jabatan: <span style="color:rgba(255,255,255,.6);font-weight:500;">${jabatan || '—'}</span></div>
     <div>
-      <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:4px;">Tampilan Tanda Tangan:</div>
-      <div class="display-mode-row" id="dm-${s._id}">
-        <button type="button" class="dm-btn ${dm==='full'?'active':''}" onclick="setDisplayMode('${s._id}','full',this.closest('.display-mode-row'))">QR + Nama<br>+ Jabatan</button>
-        <button type="button" class="dm-btn ${dm==='name_only'?'active':''}" onclick="setDisplayMode('${s._id}','name_only',this.closest('.display-mode-row'))">QR +<br>Nama</button>
-        <button type="button" class="dm-btn ${dm==='qr_only'?'active':''}" onclick="setDisplayMode('${s._id}','qr_only',this.closest('.display-mode-row'))">QR<br>Saja</button>
-      </div>
-      <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:6px;margin-bottom:4px;">Opsi:</div>
       <div class="display-mode-row">
-        <button type="button" class="dm-btn ${s.showDate !== false ? 'active' : ''}" id="btnDate-${s._id}" onclick="toggleDate('${s._id}',this)">Tanggal</button>
+        <button type="button" class="dm-btn ${s.showDate !== false ? 'active' : ''}" id="btnDate-${s._id}" onclick="toggleDate('${s._id}',this)">Tampilkan Tanggal</button>
       </div>
       <button type="button" class="lock-btn" id="lockBtn-${s._id}" onclick="toggleLock('${s._id}')">Tetapkan Posisi</button>
     </div>`;
@@ -1457,8 +1440,8 @@ function rebuildStamp(id) {
   const dateStr  = stamp.dataset.dateStr || '';
   const lokasi   = stamp.dataset.lokasi || 'Jakarta';
   const dateHtml = showDate && dateStr ? `<div class="qr-stamp-date">${lokasi}, ${dateStr}</div>` : '';
-  const nameHtml = mode !== 'qr_only' ? `<div class="qr-stamp-sig"></div><div class="qr-stamp-name">${signerName}</div>` : '';
-  const roleHtml = mode === 'full' ? `<div class="qr-stamp-role">${jabatan}</div>` : '';
+  const nameHtml = `<div class="qr-stamp-sig"></div><div class="qr-stamp-name">${signerName}</div>`;
+  const roleHtml = jabatan ? `<div class="qr-stamp-role">${jabatan}</div>` : '';
   const delHtml = `<button class="qr-delete" onclick="removeSigner('${id}',event)" title="Hapus"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>`;
   stamp.innerHTML = `${dateHtml}${qrEl}${nameHtml}${roleHtml}<div class="qr-resize"></div>${delHtml}`;
   initStamp(stamp);
