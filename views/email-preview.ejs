@@ -356,9 +356,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
           ? email.to.map(r=>r.name)
           : (email.toExternal||[]).map(r=>r.name);
         const hasBody = email.body && email.body.trim() && email.body.trim() !== '<p><br></p>';
-        // Jika sudah ada QR stamp (tanda tangan elektronik), jangan cetak nama bawaan body —
-        // QR stamp sudah menjadi tanda tangannya. Mencegah QR menimpa nama bawaan.
-        const hasSigners = !!(docSig && docSig.signers && docSig.signers.length > 0);
+        // Matikan nama bawaan body HANYA bila ada QR stamp yang sudah menampilkan namanya sendiri
+        // (mode bukan 'qr_only'). Kalau stamp 'QR Saja', nama bawaan tetap dicetak supaya nama tak hilang.
+        const hasSigners = !!(docSig && docSig.signers && docSig.signers.some(s => (s.displayMode || 'full') !== 'qr_only'));
       %>
 
       <% if (tipe === 'Memo') { %>
