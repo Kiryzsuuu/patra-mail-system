@@ -123,7 +123,7 @@
           <% } else { %>—<% } %>
         </td>
         <td style="padding:10px 14px;text-align:center;white-space:nowrap;">
-          <button onclick='editArsip(<%- JSON.stringify({_id:d._id,nomorArsip:d.nomorArsip,judul:d.judul,kategori:d.kategori,tanggal:d.tanggal,sumber:d.sumber,tertuju:d.tertuju,keterangan:d.keterangan}) %>)' style="background:none;border:none;cursor:pointer;color:var(--brand-600);padding:4px;" title="Edit">
+          <button onclick="editArsip('<%= d._id %>')" style="background:none;border:none;cursor:pointer;color:var(--brand-600);padding:4px;" title="Edit">
             <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 13.5V16h2.5l7-7L11 6.5l-7 7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12.5 5l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           </button>
           <% if(user.role === 'superadmin'){ %>
@@ -171,7 +171,14 @@
 </div>
 
 <script>
-function editArsip(d) {
+async function editArsip(id) {
+  let d;
+  try {
+    const r = await fetch('/arsip/' + id + '/json');
+    const j = await r.json();
+    if (!j.ok) { alert('Gagal memuat data arsip.'); return; }
+    d = j.data;
+  } catch { alert('Gagal memuat data arsip.'); return; }
   document.getElementById('ea_id').value = d._id;
   document.getElementById('ea_nomor').value = d.nomorArsip || '';
   document.getElementById('ea_judul').value = d.judul || '';

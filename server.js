@@ -740,7 +740,7 @@ app.get('/draft/:id/edit', requireAuth, async (req, res) => {
 });
 
 // Update draft content
-app.post('/draft/:id/update', requireAuth, lampiranUpload.single('lampiran'), async (req, res) => {
+app.post('/draft/:id/update', requireAuth, lampiranUpload.array('lampiran', 10), async (req, res) => {
   try {
     const { to, cc, subject, body, tag, berkas, sifat, jenis, externalRecipients,
             kodeDiv, kodeLay, kodeDir, pengirimResmi, sumberTemplate, action, hapusLampiran, suratData } = req.body;
@@ -775,12 +775,16 @@ app.post('/draft/:id/update', requireAuth, lampiranUpload.single('lampiran'), as
     const nomorSurat = buildNomorSurat(parseInt(seqPart), tipe, kd, jenis || email.jenis || 'internal',
       ROMAN_M[datePart.getMonth()+1], datePart.getFullYear());
 
-    // Tentukan lampiran: file baru, hapus, atau tetap
+    // Tentukan lampiran: file baru (bisa >1), hapus, atau tetap
     let lampiranUpdate = {};
-    if (req.file) {
-      lampiranUpdate = { lampiran: '/uploads/' + req.file.filename, lampiranNama: req.file.originalname };
+    if (req.files && req.files.length) {
+      lampiranUpdate = {
+        lampiran: '/uploads/' + req.files[0].filename,
+        lampiranNama: req.files[0].originalname,
+        lampiranList: req.files.map(f => ({ path: '/uploads/' + f.filename, nama: f.originalname }))
+      };
     } else if (hapusLampiran === '1') {
-      lampiranUpdate = { lampiran: '', lampiranNama: '' };
+      lampiranUpdate = { lampiran: '', lampiranNama: '', lampiranList: [] };
     }
 
     await Email.findByIdAndUpdate(email._id, {
@@ -1460,15 +1464,36 @@ app.post('/email/:id/send', requireAuth, async (req, res) => {
         subject: `[${email.nomorSurat}] ${email.subject}`,
         html: htmlBody
       };
+      const attachments = [];
+
+      // Lampiran PDF surat lengkap (berkop + TTD/QR, identik dengan preview)
+      try {
+        const docSig = await DocumentSignature.findOne({ emailId: email._id });
+        const [users, counts] = await Promise.all([
+          User.find({ isActive: true }, 'name email role organization jabatan kodeDir _id').sort({ name: 1 }),
+          getMailCounts(req.user._id)
+        ]);
+        const baseHref = process.env.APP_URL || `http://localhost:${process.env.PORT || 3005}`;
+        const suratPdf = await renderViewToPdf(app, 'email-preview', {
+          title: 'Surat', email,
+          docSig: docSig || { signers: [] },
+          isSender: false, isOwner: false, isPendingCosigner: false,
+          currentUser: req.user, users, formatDate, baseHref, ...counts
+        });
+        const safe = (email.nomorSurat || email.subject || 'surat').replace(/[^\w\d\-_. ]+/g, '_').trim() || 'surat';
+        attachments.push({ filename: `${safe}.pdf`, content: suratPdf, contentType: 'application/pdf' });
+      } catch (e) { console.error('Gagal render PDF surat untuk email:', e); }
+
+      // Lampiran tambahan yang diupload
       const lampiranAll = (email.lampiranList && email.lampiranList.length)
         ? email.lampiranList
         : (email.lampiran ? [{ path: email.lampiran, nama: email.lampiranNama }] : []);
-      if (lampiranAll.length) {
-        mailOptions.attachments = lampiranAll.map(l => ({
-          filename: l.nama || path.basename(l.path),
-          path: path.join(__dirname, l.path)
-        }));
-      }
+      lampiranAll.forEach(l => attachments.push({
+        filename: l.nama || path.basename(l.path),
+        path: path.join(__dirname, l.path)
+      }));
+
+      if (attachments.length) mailOptions.attachments = attachments;
       await transporter.sendMail(mailOptions);
     }
 
