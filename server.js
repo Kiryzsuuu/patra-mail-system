@@ -21,6 +21,7 @@ const Agreement = require('./models/Agreement');
 const DocCounter = require('./models/DocCounter');
 const SuratMasuk = require('./models/SuratMasuk');
 const Direktorat = require('./models/Direktorat');
+const KodeDireksi = require('./models/KodeDireksi');
 const Jabatan    = require('./models/Jabatan');
 const Organisasi = require('./models/Organisasi');
 const DocumentSignature = require('./models/DocumentSignature');
@@ -111,6 +112,8 @@ mongoose.connect(MONGO_URI)
       await mongoose.connection.db.collection('documentsignatures').dropIndex('suratId_1');
       console.log('Index suratId_1 lama berhasil di-drop, akan dibuat ulang sebagai sparse.');
     } catch { /* index sudah tidak ada atau belum pernah dibuat */ }
+    // Seed & cache kode direksi agar penomoran surat punya data
+    try { await seedKodeDireksi(); await getKodeDireksiCached(); } catch (e) { console.error('Init KodeDireksi:', e.message); }
   })
   .catch(err => console.error('MongoDB error:', err));
 
@@ -194,6 +197,34 @@ async function getDirektoratsCached() {
   _dirCache = { data, ts: Date.now() };
   return data;
 }
+
+// Cache + seeder untuk Kode Direksi (dipakai compose & penomoran)
+let _kdCache = { data: [], ts: 0 };
+const KODE_DIREKSI_DEFAULT = [
+  { kode: 'KOM',  nama: 'Dewan Komisaris',            group: 'divisi',  urutan: 1 },
+  { kode: 'CEO',  nama: 'Direktur Utama',             group: 'direksi', urutan: 2 },
+  { kode: 'CTO',  nama: 'Direktur Teknik',            group: 'direksi', urutan: 3 },
+  { kode: 'CMO',  nama: 'Direktur Marketing',         group: 'direksi', urutan: 4 },
+  { kode: 'COO',  nama: 'Direktur Operasional',       group: 'direksi', urutan: 5 },
+  { kode: 'PLAN', nama: 'Business Strategy & Finance',group: 'divisi',  urutan: 6 },
+  { kode: 'TECH', nama: 'Technical & Operations',     group: 'divisi',  urutan: 7 },
+  { kode: 'MP',   nama: 'Marketing & Partnership',    group: 'divisi',  urutan: 8 },
+];
+async function seedKodeDireksi() {
+  try {
+    const n = await KodeDireksi.countDocuments();
+    if (n === 0) await KodeDireksi.insertMany(KODE_DIREKSI_DEFAULT);
+  } catch (e) { console.error('Seed KodeDireksi gagal:', e.message); }
+}
+async function getKodeDireksiCached() {
+  if (Date.now() - _kdCache.ts < 60000 && _kdCache.data.length) return _kdCache.data;
+  let data = await KodeDireksi.find({ aktif: { $ne: false } }).sort('urutan kode').lean();
+  if (!data.length) { await seedKodeDireksi(); data = await KodeDireksi.find({ aktif: { $ne: false } }).sort('urutan kode').lean(); }
+  _kdCache = { data, ts: Date.now() };
+  _kdCodes = data.map(d => d.kode);
+  return data;
+}
+let _kdCodes = KODE_DIREKSI_DEFAULT.map(d => d.kode);
 
 // ── PUBLIC REDIRECT — harus sebelum semua route lain ──
 app.get('/inspira/:code', async (req, res) => {
@@ -877,10 +908,12 @@ const KODE_DIR_MAP = {
 };
 // Hierarki akses kodeDir berdasarkan role & kodeDir user
 function getAllowedKodeDir(user) {
-  if (['admin','superadmin','direktur'].includes(user.role))
-    return ['KOM','CEO','CTO','CMO','COO','PLAN','TECH','MP'];
-  // role user: hanya kodeDir yang ditugaskan, fallback ke kode divisi
-  return user.kodeDir ? [user.kodeDir] : ['PLAN','TECH','MP'];
+  const all = (_kdCodes && _kdCodes.length) ? _kdCodes : ['KOM','CEO','CTO','CMO','COO','PLAN','TECH','MP'];
+  if (['admin','superadmin','direktur'].includes(user.role)) return all;
+  // role user: hanya kodeDir yang ditugaskan, fallback ke semua divisi yang tersedia
+  if (user.kodeDir) return [user.kodeDir];
+  const divisi = (_kdCache.data || []).filter(d => d.group === 'divisi').map(d => d.kode);
+  return divisi.length ? divisi : ['PLAN','TECH','MP'];
 }
 // Sifat surat yang diizinkan per role
 function getAllowedSifat(user) {
@@ -1029,6 +1062,7 @@ app.get('/dokumen-tersimpan', requireAuth, (req, res) => res.redirect('/inbox'))
 app.get('/compose/new', requireAuth, async (req, res) => {
   try {
     const counts = await getMailCounts(req.user._id);
+    const kodeDireksiList = await getKodeDireksiCached();
     const allowedKodeDir = getAllowedKodeDir(req.user);
     const allowedSifat   = getAllowedSifat(req.user);
 
@@ -1048,7 +1082,7 @@ app.get('/compose/new', requireAuth, async (req, res) => {
     }
 
     const allUsers = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan kodeDir').sort('name').lean();
-    res.render('compose', { active: 'compose', title: 'Buat Dokumen Baru', users: allUsers, pengirimUsers, allowedKodeDir, allowedSifat, jenisDefault: null, hideJenisTabs: false, ...counts });
+    res.render('compose', { active: 'compose', title: 'Buat Dokumen Baru', users: allUsers, pengirimUsers, allowedKodeDir, allowedSifat, kodeDireksiList, jenisDefault: null, hideJenisTabs: false, ...counts });
   } catch (err) {
     res.render('compose', { active: 'compose', title: 'Buat Dokumen Baru', users: [], pengirimUsers: [], allowedKodeDir: ['PLAN','TECH','MP'], allowedSifat: ['Biasa/Terbuka','Segera'], jenisDefault: null, hideJenisTabs: false, inboxCount: 0, draftCount: 0 });
   }
@@ -2112,6 +2146,53 @@ app.delete('/admin/direktorat/:id', requireAuth, requireSuperAdmin, async (req, 
   } catch (err) { res.json({ ok: false }); }
 });
 
+// ── KODE DIREKSI ROUTES ──
+app.get('/admin/kode-direksi', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const counts = await getMailCounts(req.user._id);
+    await seedKodeDireksi();
+    const kodeList = await KodeDireksi.find().sort('urutan kode').lean();
+    res.render('admin-kode-direksi', { title: 'Kode Direksi', active: 'kode-direksi', kodeList, ...counts });
+  } catch (err) { console.error(err); res.redirect('/admin'); }
+});
+
+app.post('/admin/kode-direksi', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { kode, nama, group, urutan, aktif } = req.body;
+    if (!kode || !nama) return res.json({ ok: false, message: 'Kode dan nama wajib diisi.' });
+    const existing = await KodeDireksi.findOne({ kode: kode.toUpperCase() });
+    if (existing) return res.json({ ok: false, message: `Kode "${kode}" sudah digunakan.` });
+    await KodeDireksi.create({
+      kode: kode.toUpperCase(), nama: nama.trim(),
+      group: group === 'direksi' ? 'direksi' : 'divisi',
+      urutan: parseInt(urutan) || 0, aktif: aktif !== false && aktif !== 'false'
+    });
+    _kdCache = { data: [], ts: 0 };
+    res.json({ ok: true });
+  } catch (err) { res.json({ ok: false, message: 'Gagal menyimpan.' }); }
+});
+
+app.put('/admin/kode-direksi/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { nama, group, urutan, aktif } = req.body;
+    await KodeDireksi.findByIdAndUpdate(req.params.id, {
+      nama: (nama || '').trim(),
+      group: group === 'direksi' ? 'direksi' : 'divisi',
+      urutan: parseInt(urutan) || 0, aktif: aktif !== false && aktif !== 'false'
+    });
+    _kdCache = { data: [], ts: 0 };
+    res.json({ ok: true });
+  } catch (err) { res.json({ ok: false }); }
+});
+
+app.delete('/admin/kode-direksi/:id', requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    await KodeDireksi.findByIdAndDelete(req.params.id);
+    _kdCache = { data: [], ts: 0 };
+    res.json({ ok: true });
+  } catch (err) { res.json({ ok: false }); }
+});
+
 // ── JABATAN ROUTES ──
 app.get('/admin/jabatan', requireAuth, requireAdmin, async (req, res) => {
   try {
@@ -2767,6 +2848,7 @@ app.get('/perusahaan-list', requireAuth, async (req, res) => {
 app.get('/compose/internal', requireAuth, async (req, res) => {
   try {
     const counts = await getMailCounts(req.user._id);
+    const kodeDireksiList = await getKodeDireksiCached();
     const allowedKodeDir = getAllowedKodeDir(req.user);
     const allowedSifat   = getAllowedSifat(req.user);
     let pengirimUsers = [];
@@ -2780,7 +2862,7 @@ app.get('/compose/internal', requireAuth, async (req, res) => {
     const allUsers = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan kodeDir').sort('name').lean();
     res.render('compose', {
       active: 'compose-internal', title: 'Tulis Surat Internal',
-      users: allUsers, pengirimUsers, allowedKodeDir, allowedSifat,
+      users: allUsers, pengirimUsers, allowedKodeDir, allowedSifat, kodeDireksiList,
       jenisDefault: 'internal', hideJenisTabs: true, ...counts
     });
   } catch (err) {
@@ -2791,6 +2873,7 @@ app.get('/compose/internal', requireAuth, async (req, res) => {
 app.get('/compose/eksternal', requireAuth, requireDirektur, async (req, res) => {
   try {
     const counts = await getMailCounts(req.user._id);
+    const kodeDireksiList = await getKodeDireksiCached();
     const allowedKodeDir = getAllowedKodeDir(req.user);
     const allowedSifat   = getAllowedSifat(req.user);
     let pengirimUsers = [];
@@ -2803,7 +2886,7 @@ app.get('/compose/eksternal', requireAuth, requireDirektur, async (req, res) => 
     const allUsers = await User.find({ _id: { $ne: req.user._id }, isActive: true }).select('name email organization enik jabatan kodeDir').sort('name').lean();
     res.render('compose', {
       active: 'compose-eksternal', title: 'Tulis Surat Eksternal',
-      users: allUsers, pengirimUsers, allowedKodeDir, allowedSifat,
+      users: allUsers, pengirimUsers, allowedKodeDir, allowedSifat, kodeDireksiList,
       jenisDefault: 'eksternal', hideJenisTabs: true, ...counts
     });
   } catch (err) {

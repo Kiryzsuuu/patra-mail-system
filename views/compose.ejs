@@ -136,18 +136,22 @@ details.cgroup > .cgroup-body { padding:16px; }
           <label class="form-label" id="kodeDirLabel">Kode Direksi <span class="req">*</span></label>
           <div class="select-wrap">
             <select name="kodeDir" id="kodeDirSel" class="form-control form-select">
-              <% const kodeDirOpts=[
-                {v:'KOM',  l:'KOM — Dewan Komisaris', group:'divisi'},
-                {v:'CEO',  l:'CEO — Direktur Utama', group:'direksi'},
-                {v:'CTO',  l:'CTO — Direktur Teknik', group:'direksi'},
-                {v:'CMO',  l:'CMO — Direktur Marketing', group:'direksi'},
-                {v:'COO',  l:'COO — Direktur Operasional', group:'direksi'},
-                {v:'PLAN', l:'PLAN — Business Strategy &amp; Finance', group:'divisi'},
-                {v:'TECH', l:'TECH — Technical &amp; Operations', group:'divisi'},
-                {v:'MP',   l:'MP — Marketing &amp; Partnership', group:'divisi'},
-              ]; %>
+              <%
+                const kodeDirOpts = (typeof kodeDireksiList !== 'undefined' && kodeDireksiList && kodeDireksiList.length)
+                  ? kodeDireksiList.map(k => ({ v: k.kode, l: k.kode + ' — ' + k.nama, group: k.group }))
+                  : [
+                    {v:'KOM',l:'KOM — Dewan Komisaris',group:'divisi'},
+                    {v:'CEO',l:'CEO — Direktur Utama',group:'direksi'},
+                    {v:'CTO',l:'CTO — Direktur Teknik',group:'direksi'},
+                    {v:'CMO',l:'CMO — Direktur Marketing',group:'direksi'},
+                    {v:'COO',l:'COO — Direktur Operasional',group:'direksi'},
+                    {v:'PLAN',l:'PLAN — Business Strategy & Finance',group:'divisi'},
+                    {v:'TECH',l:'TECH — Technical & Operations',group:'divisi'},
+                    {v:'MP',l:'MP — Marketing & Partnership',group:'divisi'},
+                  ];
+              %>
               <% kodeDirOpts.forEach(function(o){ if(allowedKodeDir.includes(o.v)){ %>
-              <option value="<%= o.v %>" data-group="<%= o.group %>" <%= (user.kodeDir===o.v||(allowedKodeDir.length===1&&allowedKodeDir[0]===o.v))?'selected':'' %>><%- o.l %></option>
+              <option value="<%= o.v %>" data-group="<%= o.group %>" <%= (user.kodeDir===o.v||(allowedKodeDir.length===1&&allowedKodeDir[0]===o.v))?'selected':'' %>><%= o.l %></option>
               <% }}); %>
             </select>
           </div>
@@ -161,35 +165,19 @@ details.cgroup > .cgroup-body { padding:16px; }
         <input type="text" name="pengirimResmi" class="form-control" value="<%= user.name %>" readonly style="background:var(--gray-50);color:var(--gray-500);">
         <small class="form-hint">Sebagai direktur, surat hanya dapat dibuat atas nama diri sendiri.</small>
         <% } else if (['admin','superadmin'].includes(user.role)) { %>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <input type="text" name="pengirimResmi" id="pengirimResmiInput" class="form-control" value="<%= user.name %>" placeholder="Nama pengirim resmi di surat">
-          <select id="pengirimPicker" class="form-control form-select" onchange="document.getElementById('pengirimResmiInput').value=this.value;this.value=''">
-            <option value="">— Pilih dari daftar karyawan —</option>
-            <% groupUsersByDir(pengirimUsers, direktorats).forEach(function(g){ %>
-            <optgroup label="<%= g.label %>">
-              <% g.users.forEach(u => { %><option value="<%= u.name %>"><%= u.enik ? u.enik + ' — ' : '' %><%= u.name %><%= u.jabatan ? ' (' + u.jabatan + ')' : '' %></option><% }) %>
-            </optgroup>
-            <% }) %>
-          </select>
-        </div>
-        <small class="form-hint">Admin dapat membuat surat atas nama direktur atau komisaris. Pembuat: <strong><%= user.name %></strong></small>
+        <input type="text" name="pengirimResmi" id="pengirimResmiInput" class="form-control" value="<%= user.name %>" placeholder="Ketik untuk mencari nama karyawan..." list="pengirimDatalist" autocomplete="off">
+        <datalist id="pengirimDatalist">
+          <% pengirimUsers.forEach(u => { %><option value="<%= u.name %>"><%= u.enik ? u.enik + ' — ' : '' %><%= u.name %><%= u.jabatan ? ' (' + u.jabatan + ')' : '' %></option><% }) %>
+        </datalist>
+        <small class="form-hint">Ketik nama untuk mencari. Admin dapat membuat surat atas nama direktur atau komisaris. Pembuat: <strong><%= user.name %></strong></small>
         <% } else { %>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <input type="text" name="pengirimResmi" id="pengirimResmiInput" class="form-control" value="<%= user.name %>" placeholder="Nama pengirim resmi di surat">
-          <% if (pengirimUsers.length > 0) { %>
-          <select id="pengirimPicker" class="form-control form-select" onchange="document.getElementById('pengirimResmiInput').value=this.value;this.value=''">
-            <option value="">— Pilih dari daftar karyawan —</option>
-            <% groupUsersByDir(pengirimUsers, direktorats).forEach(function(g){ %>
-            <optgroup label="<%= g.label %>">
-              <% g.users.forEach(u => { %><option value="<%= u.name %>"><%= u.enik ? u.enik + ' — ' : '' %><%= u.name %><%= u.jabatan ? ' (' + u.jabatan + ')' : '' %></option><% }) %>
-            </optgroup>
-            <% }) %>
-          </select>
-          <% } else { %>
-          <input type="text" class="form-control" disabled placeholder="Tidak ada karyawan lain di direktorat ini" style="background:var(--gray-50);color:var(--gray-400);">
-          <% } %>
-        </div>
-        <small class="form-hint">Hanya dapat memilih pengirim dari direktorat yang sama. Pembuat: <strong><%= user.name %></strong><%= user.enik ? ' (ENIK: ' + user.enik + ')' : '' %></small>
+        <input type="text" name="pengirimResmi" id="pengirimResmiInput" class="form-control" value="<%= user.name %>" placeholder="Ketik untuk mencari nama..." <% if (pengirimUsers.length > 0) { %>list="pengirimDatalist"<% } %> autocomplete="off">
+        <% if (pengirimUsers.length > 0) { %>
+        <datalist id="pengirimDatalist">
+          <% pengirimUsers.forEach(u => { %><option value="<%= u.name %>"><%= u.enik ? u.enik + ' — ' : '' %><%= u.name %><%= u.jabatan ? ' (' + u.jabatan + ')' : '' %></option><% }) %>
+        </datalist>
+        <% } %>
+        <small class="form-hint">Ketik nama untuk mencari pengirim dari direktorat yang sama. Pembuat: <strong><%= user.name %></strong><%= user.enik ? ' (ENIK: ' + user.enik + ')' : '' %></small>
         <% } %>
       </div>
 
@@ -279,15 +267,10 @@ details.cgroup > .cgroup-body { padding:16px; }
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
           <div class="form-group">
             <label class="form-label">Kepada (Jabatan / Nama)</label>
-            <input type="text" id="memo_kepada" class="form-control" placeholder="cth: Kepala Bagian Keuangan">
-            <select id="memo_kepada_picker" class="form-control form-select" style="margin-top:8px;" onchange="if(this.value){document.getElementById('memo_kepada').value=this.value;}this.value=''">
-              <option value="">— Pilih dari daftar karyawan —</option>
-              <% groupUsersByDir(pengirimUsers, direktorats).forEach(function(g){ %>
-              <optgroup label="<%= g.label %>">
-                <% g.users.forEach(u => { %><option value="<%= u.jabatan || u.name %>"><%= u.enik ? u.enik + ' — ' : '' %><%= u.name %><%= u.jabatan ? ' (' + u.jabatan + ')' : '' %></option><% }) %>
-              </optgroup>
-              <% }) %>
-            </select>
+            <input type="text" id="memo_kepada" class="form-control" placeholder="Ketik untuk mencari jabatan/nama..." list="kepadaDatalist" autocomplete="off">
+            <datalist id="kepadaDatalist">
+              <% pengirimUsers.forEach(u => { %><option value="<%= u.jabatan || u.name %>"><%= u.name %><%= u.jabatan ? ' — ' + u.jabatan : '' %></option><% }) %>
+            </datalist>
           </div>
           <div class="form-group">
             <label class="form-label">Klasifikasi</label>
@@ -983,9 +966,8 @@ details.cgroup > .cgroup-body { padding:16px; }
         <div class="form-group">
           <label class="form-label">Penerima (Perusahaan) <span class="req">*</span></label>
           <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
-            <select id="perusahaanPicker" class="form-control form-select" style="flex:1;" onchange="selectExt(this.value)">
-              <option value="">— Pilih satu perusahaan —</option>
-            </select>
+            <input id="perusahaanPicker" class="form-control" style="flex:1;" list="perusahaanDatalist" placeholder="Ketik untuk mencari perusahaan..." autocomplete="off" onchange="selectExtByLabel(this.value)">
+            <datalist id="perusahaanDatalist"></datalist>
             <a href="/perusahaan" target="_blank" style="font-size:12px;color:var(--brand-600);white-space:nowrap;">Kelola</a>
           </div>
           <div class="ext-list" id="extList"></div>
@@ -1388,6 +1370,17 @@ function removeExt(id) {
   extList = [];
   const sel = document.getElementById('perusahaanPicker'); if (sel) sel.value = '';
   renderExtList();
+}
+// Cari perusahaan dari label datalist (mendukung "SINGKATAN — Nama" atau nama saja)
+function selectExtByLabel(label) {
+  if (!label) { extList = []; renderExtList(); return; }
+  const norm = s => String(s||'').trim().toLowerCase();
+  const p = _perusahaanData.find(x => {
+    const full = (x.singkatan ? x.singkatan + ' — ' : '') + x.nama;
+    return norm(full) === norm(label) || norm(x.nama) === norm(label) || norm(x.singkatan) === norm(label);
+  });
+  if (!p) { extList = []; renderExtList(); return; }
+  selectExt(p._id);
 }
 function renderExtList() {
   const list = document.getElementById('extList');
@@ -1876,13 +1869,14 @@ async function loadPerusahaan() {
   try {
     const r = await fetch('/perusahaan-list');
     _perusahaanData = await r.json();
-    const sel = document.getElementById('perusahaanPicker');
-    if (!sel) return;
+    const dl = document.getElementById('perusahaanDatalist');
+    if (!dl) return;
+    dl.innerHTML = '';
     _perusahaanData.forEach(p => {
       const o = document.createElement('option');
-      o.value = p._id;
-      o.textContent = (p.singkatan ? p.singkatan + ' — ' : '') + p.nama;
-      sel.appendChild(o);
+      o.value = (p.singkatan ? p.singkatan + ' — ' : '') + p.nama;
+      o.dataset.id = p._id;
+      dl.appendChild(o);
     });
   } catch(e) {}
 }

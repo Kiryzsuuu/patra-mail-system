@@ -1,0 +1,176 @@
+<%- include('./partials/header') %>
+<style>
+.dir-table { width:100%; border-collapse:collapse; font-size:13px; }
+.dir-table th { padding:10px 16px; text-align:left; font-size:11.5px; font-weight:600; color:var(--gray-500); background:var(--gray-50); border-bottom:1px solid var(--gray-200); text-transform:uppercase; letter-spacing:.4px; }
+.dir-table td { padding:12px 16px; border-bottom:1px solid var(--gray-100); color:var(--gray-700); vertical-align:middle; }
+.dir-table tr:last-child td { border-bottom:none; }
+.dir-table tbody tr:hover { background:var(--gray-50); }
+.kode-badge { font-family:monospace; font-size:12px; font-weight:700; color:var(--brand-700); background:#eff6ff; padding:3px 10px; border-radius:6px; }
+.grp-badge { font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px; }
+.grp-direksi { background:#fef3c7; color:#b45309; }
+.grp-divisi { background:#dcfce7; color:#15803d; }
+
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:var(--radius-lg); padding:28px; width:480px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+.modal-title { font-size:16px; font-weight:700; color:var(--gray-900); margin-bottom:18px; }
+.form-label { font-size:12px; font-weight:600; color:var(--gray-600); margin-bottom:4px; display:block; }
+</style>
+
+<div class="page-header">
+  <div class="page-title-group">
+    <div class="page-breadcrumb"><a href="/admin">Admin Dashboard</a> / Kode Direksi</div>
+    <h1 class="page-title">Manajemen Kode Direksi</h1>
+    <p class="page-subtitle">Kode yang dipakai untuk penomoran surat (Nota Dinas, Surat Dinas, dll)</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" onclick="openModal()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Tambah Kode
+    </button>
+  </div>
+</div>
+
+<div class="mail-list-wrap">
+  <% if (kodeList.length === 0) { %>
+  <div class="empty-state" style="padding:48px;">
+    <p>Belum ada kode direksi. Tambahkan kode pertama.</p>
+  </div>
+  <% } else { %>
+  <div style="overflow-x:auto;">
+    <table class="dir-table">
+      <thead>
+        <tr>
+          <th style="width:110px;">Kode</th>
+          <th>Nama / Keterangan</th>
+          <th style="width:110px;">Kelompok</th>
+          <th style="width:80px;">Urutan</th>
+          <th style="width:90px;">Status</th>
+          <th style="width:140px;">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+      <% kodeList.forEach(function(d) { %>
+        <tr>
+          <td><span class="kode-badge"><%= d.kode %></span></td>
+          <td style="font-weight:500;color:var(--gray-900);"><%= d.nama %></td>
+          <td><span class="grp-badge <%= d.group==='direksi'?'grp-direksi':'grp-divisi' %>"><%= d.group==='direksi'?'Direksi':'Divisi' %></span></td>
+          <td><%= d.urutan %></td>
+          <td>
+            <% if (d.aktif !== false) { %><span style="font-size:12px;color:var(--green-600);font-weight:600;">Aktif</span>
+            <% } else { %><span style="font-size:12px;color:var(--gray-400);">Nonaktif</span><% } %>
+          </td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-ghost" style="padding:4px 10px;font-size:12.5px;"
+                onclick='openEdit(<%- JSON.stringify({_id:d._id,kode:d.kode,nama:d.nama,group:d.group,urutan:d.urutan,aktif:d.aktif!==false}) %>)'>Edit</button>
+              <button class="btn btn-ghost" style="padding:4px 10px;font-size:12.5px;color:var(--red-500);"
+                onclick="hapus('<%= d._id %>','<%= d.kode %>')">Hapus</button>
+            </div>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">Tambah Kode Direksi</div>
+    <input type="hidden" id="kdId">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+      <div>
+        <label class="form-label">Kode *</label>
+        <input type="text" id="kdKode" class="form-control" placeholder="Contoh: CEO, TECH..." style="text-transform:uppercase;">
+      </div>
+      <div>
+        <label class="form-label">Kelompok *</label>
+        <select id="kdGroup" class="form-control form-select">
+          <option value="direksi">Direksi</option>
+          <option value="divisi">Divisi</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label class="form-label">Nama / Keterangan *</label>
+      <input type="text" id="kdNama" class="form-control" placeholder="Contoh: Direktur Utama, Technical & Operations...">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+      <div>
+        <label class="form-label">Urutan</label>
+        <input type="number" id="kdUrutan" class="form-control" value="0">
+      </div>
+      <div>
+        <label class="form-label">Status</label>
+        <select id="kdAktif" class="form-control form-select">
+          <option value="true">Aktif</option>
+          <option value="false">Nonaktif</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-ghost" onclick="closeModal()">Batal</button>
+      <button class="btn btn-primary" onclick="simpan()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openModal() {
+  document.getElementById('modalTitle').textContent = 'Tambah Kode Direksi';
+  document.getElementById('kdId').value = '';
+  document.getElementById('kdKode').value = '';
+  document.getElementById('kdNama').value = '';
+  document.getElementById('kdGroup').value = 'divisi';
+  document.getElementById('kdUrutan').value = '0';
+  document.getElementById('kdAktif').value = 'true';
+  document.getElementById('kdKode').readOnly = false;
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('kdKode').focus(), 100);
+}
+function openEdit(d) {
+  document.getElementById('modalTitle').textContent = 'Edit Kode Direksi';
+  document.getElementById('kdId').value = d._id;
+  document.getElementById('kdKode').value = d.kode;
+  document.getElementById('kdKode').readOnly = true;
+  document.getElementById('kdNama').value = d.nama;
+  document.getElementById('kdGroup').value = d.group || 'divisi';
+  document.getElementById('kdUrutan').value = d.urutan || 0;
+  document.getElementById('kdAktif').value = d.aktif ? 'true' : 'false';
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('kdNama').focus(), 100);
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+async function simpan() {
+  const kode = document.getElementById('kdKode').value.trim().toUpperCase();
+  const nama = document.getElementById('kdNama').value.trim();
+  const id   = document.getElementById('kdId').value;
+  if (!kode || !nama) { alert('Kode dan Nama wajib diisi.'); return; }
+  const body = {
+    kode, nama,
+    group:  document.getElementById('kdGroup').value,
+    urutan: parseInt(document.getElementById('kdUrutan').value) || 0,
+    aktif:  document.getElementById('kdAktif').value === 'true'
+  };
+  const url    = id ? '/admin/kode-direksi/' + id : '/admin/kode-direksi';
+  const method = id ? 'PUT' : 'POST';
+  const res    = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (data.ok) location.reload();
+  else alert(data.message || 'Gagal menyimpan.');
+}
+async function hapus(id, kode) {
+  if (!confirm(`Hapus kode direksi "${kode}"? Surat lama tidak terpengaruh.`)) return;
+  const res  = await fetch('/admin/kode-direksi/' + id, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) location.reload();
+  else alert(data.message || 'Gagal menghapus.');
+}
+document.getElementById('kdKode').addEventListener('input', function() { this.value = this.value.toUpperCase(); });
+document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+</script>
+
+<%- include('./partials/footer') %>
