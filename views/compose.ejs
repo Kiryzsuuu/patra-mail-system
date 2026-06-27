@@ -1045,46 +1045,24 @@ const SizeStyle = Quill.import('attributors/style/size');
 SizeStyle.whitelist = ['10px','12px','14px','16px','18px','20px','24px','28px','32px'];
 Quill.register(SizeStyle, true);
 
-// ── EDITABLE TABLE BLOTS (Quill 1.3.7 mendukung Container di level scroll, spt. list) ──
-(function registerTableBlots() {
-  const Container = Quill.import('blots/container');
-  const Block     = Quill.import('blots/block');
-
-  class TableCell extends Block {
+// ── TABEL EDITABLE (pendekatan embed: 1 blok, sel bisa diklik & diketik) ──
+(function registerTableEmbed() {
+  const BlockEmbed = Quill.import('blots/block/embed');
+  class TableEmbed extends BlockEmbed {
     static create(value) {
       const node = super.create();
-      node.setAttribute('style', 'border:1px solid #999;padding:6px 10px;min-width:60px;vertical-align:top;');
+      node.setAttribute('contenteditable', 'false');           // blok atomik bagi Quill
+      node.innerHTML = value || '';
+      // tiap sel boleh diketik walau bloknya sendiri non-editable
+      node.querySelectorAll('td').forEach(td => td.setAttribute('contenteditable', 'true'));
       return node;
     }
+    static value(node) { return node.innerHTML; }              // baca isi sel terkini (live)
   }
-  TableCell.blotName = 'tableCell'; TableCell.tagName = 'TD';
-
-  class TableRow extends Container {}
-  TableRow.blotName = 'tableRow'; TableRow.tagName = 'TR';
-
-  class TableBody extends Container {}
-  TableBody.blotName = 'tableBody'; TableBody.tagName = 'TBODY';
-
-  class TableContainer extends Container {
-    static create() {
-      const node = super.create();
-      node.setAttribute('style', 'border-collapse:collapse;width:100%;margin:10px 0;');
-      return node;
-    }
-  }
-  TableContainer.blotName = 'tableContainer'; TableContainer.tagName = 'TABLE';
-
-  TableContainer.allowedChildren = [TableBody];
-  TableBody.requiredContainer    = TableContainer;
-  TableBody.allowedChildren      = [TableRow];
-  TableRow.requiredContainer     = TableBody;
-  TableRow.allowedChildren       = [TableCell];
-  TableCell.requiredContainer    = TableRow;
-
-  Quill.register(TableContainer, true);
-  Quill.register(TableBody, true);
-  Quill.register(TableRow, true);
-  Quill.register(TableCell, true);
+  TableEmbed.blotName  = 'tableEmbed';
+  TableEmbed.tagName   = 'div';
+  TableEmbed.className = 'ql-table-embed';
+  Quill.register(TableEmbed, true);
 })();
 
 const quill = new Quill('#quillEditor', {
@@ -1123,6 +1101,10 @@ function imageHandler() {
   const style = document.createElement('style');
   style.textContent = `
   .ql-table::before { content: '⊞'; font-size: 15px; line-height: 1; }
+  .ql-table-embed { margin: 10px 0; }
+  .ql-table-embed table { border-collapse: collapse; width: 100%; }
+  .ql-table-embed td { border: 1px solid #999; padding: 6px 10px; min-width: 60px; vertical-align: top; }
+  .ql-table-embed td:focus { outline: 2px solid #3b82f6; outline-offset: -2px; }
   .tbl-picker { position:fixed; z-index:9999; background:#fff; border:1px solid var(--gray-200); border-radius:8px; padding:8px; box-shadow:0 4px 20px rgba(0,0,0,.15); }
   .tbl-picker-grid { display:grid; grid-template-columns:repeat(8,22px); gap:3px; }
   .tbl-picker-cell { width:22px; height:22px; border:1px solid var(--gray-300); border-radius:3px; cursor:pointer; background:#f9fafb; transition:background .1s,border-color .1s; }
@@ -1171,21 +1153,25 @@ function tablePickerHandler() {
   }), 0);
 }
 function insertTable(rows, cols) {
-  let html = `<table style="border-collapse:collapse;width:100%;margin:10px 0;"><tbody>`;
+  let html = `<table style="border-collapse:collapse;width:100%;margin:0;"><tbody>`;
   for (let r = 0; r < rows; r++) {
     html += '<tr>';
     for (let c = 0; c < cols; c++) {
-      // Sel berisi spasi agar kursor bisa masuk & teks bisa diketik
-      html += `<td style="border:1px solid #999;padding:6px 10px;min-width:60px;vertical-align:top;"> </td>`;
+      html += `<td style="border:1px solid #999;padding:6px 10px;min-width:60px;vertical-align:top;"><br></td>`;
     }
     html += '</tr>';
   }
-  html += '</tbody></table><p><br></p>';
+  html += '</tbody></table>';
   const range = quill.getSelection(true);
   const index = range ? range.index : quill.getLength();
-  quill.clipboard.dangerouslyPasteHTML(index, html, 'user');
-  // Tempatkan kursor di sel pertama supaya langsung bisa mengetik
-  setTimeout(() => quill.setSelection(index, 0, 'silent'), 0);
+  // Sisipkan tabel sebagai embed (1 blok) lalu beri baris kosong sesudahnya
+  quill.insertEmbed(index, 'tableEmbed', html, 'user');
+  quill.insertText(index + 1, '\n', 'user');
+  setTimeout(() => {
+    // Fokuskan ke sel pertama agar bisa langsung diketik
+    const cell = quill.root.querySelector('.ql-table-embed td');
+    if (cell) { cell.focus(); }
+  }, 0);
 }
 
 // ── FORMAT NILAI KONTRAK ──

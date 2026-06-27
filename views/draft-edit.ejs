@@ -296,28 +296,23 @@ const SizeStyle = Quill.import('attributors/style/size');
 SizeStyle.whitelist = ['10px','12px','14px','16px','18px','20px','24px','28px','32px'];
 Quill.register(SizeStyle, true);
 
-// Blot tabel agar tabel pada draf tetap tampil saat diedit ulang (sinkron dengan compose)
-(function registerTableBlots() {
-  const Container = Quill.import('blots/container');
-  const Block     = Quill.import('blots/block');
-  class TableCell extends Block {
-    static create() { const n = super.create(); n.setAttribute('style','border:1px solid #999;padding:6px 10px;min-width:60px;vertical-align:top;'); return n; }
+// Tabel embed agar tabel pada draf tetap tampil & bisa diedit ulang (sinkron dengan compose)
+(function registerTableEmbed() {
+  const BlockEmbed = Quill.import('blots/block/embed');
+  class TableEmbed extends BlockEmbed {
+    static create(value) {
+      const node = super.create();
+      node.setAttribute('contenteditable', 'false');
+      node.innerHTML = value || '';
+      node.querySelectorAll('td').forEach(td => td.setAttribute('contenteditable', 'true'));
+      return node;
+    }
+    static value(node) { return node.innerHTML; }
   }
-  TableCell.blotName = 'tableCell'; TableCell.tagName = 'TD';
-  class TableRow extends Container {}
-  TableRow.blotName = 'tableRow'; TableRow.tagName = 'TR';
-  class TableBody extends Container {}
-  TableBody.blotName = 'tableBody'; TableBody.tagName = 'TBODY';
-  class TableContainer extends Container {
-    static create() { const n = super.create(); n.setAttribute('style','border-collapse:collapse;width:100%;margin:10px 0;'); return n; }
-  }
-  TableContainer.blotName = 'tableContainer'; TableContainer.tagName = 'TABLE';
-  TableContainer.allowedChildren = [TableBody];
-  TableBody.requiredContainer    = TableContainer; TableBody.allowedChildren = [TableRow];
-  TableRow.requiredContainer     = TableBody;      TableRow.allowedChildren  = [TableCell];
-  TableCell.requiredContainer    = TableRow;
-  Quill.register(TableContainer, true); Quill.register(TableBody, true);
-  Quill.register(TableRow, true); Quill.register(TableCell, true);
+  TableEmbed.blotName  = 'tableEmbed';
+  TableEmbed.tagName   = 'div';
+  TableEmbed.className = 'ql-table-embed';
+  Quill.register(TableEmbed, true);
 })();
 
 const quill = new Quill('#quillEditor', {
