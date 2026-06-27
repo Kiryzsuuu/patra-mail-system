@@ -420,7 +420,8 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         <!-- Blok tanda tangan rata kanan -->
         <div class="naskah-sign naskah-sign-right">
           <% if (hasSigners) { %>
-            <div class="sign-row"><%- include('./partials/sig-inline', { signers: docSig.signers, sd, email, fmtDate, fmtDateSimple }) %></div>
+            <!-- Tanda tangan ditempatkan sebagai QR melayang yang bisa digeser bebas -->
+            <div class="naskah-sign-floating-space" style="height:150px;"></div>
           <% } else { %>
             <div><%= sd.ttdKota || 'Tangerang' %>, <%= sd.ttdTanggal ? fmtDateSimple(sd.ttdTanggal) : fmtDate(email.createdAt) %></div>
             <% if (sd.ttdJabatan) { %><div><%= sd.ttdJabatan %></div><% } %>
@@ -464,7 +465,8 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         <!-- Blok tanda tangan rata kiri -->
         <div class="naskah-sign naskah-sign-left">
           <% if (hasSigners) { %>
-            <div class="sign-row"><%- include('./partials/sig-inline', { signers: docSig.signers, sd, email, fmtDate, fmtDateSimple }) %></div>
+            <!-- Tanda tangan ditempatkan sebagai QR melayang yang bisa digeser bebas -->
+            <div class="naskah-sign-floating-space" style="height:150px;"></div>
           <% } else { %>
             <% if (sd.ttdJabatan) { %><div><%= sd.ttdJabatan %></div><% } %>
             <div class="naskah-sign-gap"></div>
@@ -1073,9 +1075,7 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         </div>
       </div>
 
-      <!-- QR Stamps (melayang) — hanya untuk tipe yang BELUM punya blok tanda tangan inline -->
-      <% const inlineSignTipes = ['Nota Dinas', 'Surat Eksternal']; %>
-      <% if (!inlineSignTipes.includes(tipe)) { %>
+      <!-- QR Stamps (melayang) — bisa digeser bebas untuk semua tipe surat -->
       <% docSig.signers.forEach(function(s) {
         const rl = { admin:'Administrator', direktur:'Direktur', user:'Pengguna' };
         const jabatan = s.jabatanDisplay || (s.userRole ? rl[s.userRole]||s.userRole : (s.userOrg||''));
@@ -1110,7 +1110,6 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         </button>
       </div>
       <% }) %>
-      <% } %>
 
       <!-- FOOTER RESMI INSPIRA -->
       <img src="/img/inspira_footer.png" class="doc-footer-banner" alt="">

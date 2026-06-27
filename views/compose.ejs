@@ -264,24 +264,15 @@ details.cgroup > .cgroup-body { padding:16px; }
           <span class="sec-badge">MEMO / NOTA DINAS</span>
           Informasi Internal
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          <div class="form-group">
-            <label class="form-label">Kepada (Jabatan / Nama)</label>
-            <input type="text" id="memo_kepada" class="form-control" placeholder="Ketik untuk mencari jabatan/nama..." list="kepadaDatalist" autocomplete="off">
-            <datalist id="kepadaDatalist">
-              <% pengirimUsers.forEach(u => { %><option value="<%= u.jabatan || u.name %>"><%= u.name %><%= u.jabatan ? ' — ' + u.jabatan : '' %></option><% }) %>
-            </datalist>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Klasifikasi</label>
-            <div class="select-wrap">
-              <select id="memo_klasifikasi" class="form-control form-select">
-                <option value="">— Pilih —</option>
-                <option value="RAHASIA">RAHASIA</option>
-                <option value="TERBATAS">TERBATAS</option>
-                <option value="BIASA">BIASA</option>
-              </select>
-            </div>
+        <div class="form-group">
+          <label class="form-label">Klasifikasi</label>
+          <div class="select-wrap">
+            <select id="memo_klasifikasi" class="form-control form-select">
+              <option value="">— Pilih —</option>
+              <option value="RAHASIA">RAHASIA</option>
+              <option value="TERBATAS">TERBATAS</option>
+              <option value="BIASA">BIASA</option>
+            </select>
           </div>
         </div>
       </div>
@@ -875,7 +866,7 @@ details.cgroup > .cgroup-body { padding:16px; }
       <!-- INTERNAL section -->
       <div id="internalSection">
         <div class="form-group">
-          <label class="form-label">Tertuju (Penerima Internal)</label>
+          <label class="form-label">Kepada (Penerima Internal) <span class="req">*</span> <span style="font-size:11px;color:var(--gray-400);font-weight:400;">(bisa lebih dari satu)</span></label>
           <div class="multi-select-wrap" id="tertujuWrap">
             <div class="multi-select-input" id="tertujuInput" onclick="toggleDropdown('tertuju')">
               <span class="multi-placeholder" id="tertujuPlaceholder">Pilih penerima...</span>
@@ -1054,6 +1045,48 @@ const SizeStyle = Quill.import('attributors/style/size');
 SizeStyle.whitelist = ['10px','12px','14px','16px','18px','20px','24px','28px','32px'];
 Quill.register(SizeStyle, true);
 
+// ── EDITABLE TABLE BLOTS (Quill 1.3.7 mendukung Container di level scroll, spt. list) ──
+(function registerTableBlots() {
+  const Container = Quill.import('blots/container');
+  const Block     = Quill.import('blots/block');
+
+  class TableCell extends Block {
+    static create(value) {
+      const node = super.create();
+      node.setAttribute('style', 'border:1px solid #999;padding:6px 10px;min-width:60px;vertical-align:top;');
+      return node;
+    }
+  }
+  TableCell.blotName = 'tableCell'; TableCell.tagName = 'TD';
+
+  class TableRow extends Container {}
+  TableRow.blotName = 'tableRow'; TableRow.tagName = 'TR';
+
+  class TableBody extends Container {}
+  TableBody.blotName = 'tableBody'; TableBody.tagName = 'TBODY';
+
+  class TableContainer extends Container {
+    static create() {
+      const node = super.create();
+      node.setAttribute('style', 'border-collapse:collapse;width:100%;margin:10px 0;');
+      return node;
+    }
+  }
+  TableContainer.blotName = 'tableContainer'; TableContainer.tagName = 'TABLE';
+
+  TableContainer.allowedChildren = [TableBody];
+  TableBody.requiredContainer    = TableContainer;
+  TableBody.allowedChildren      = [TableRow];
+  TableRow.requiredContainer     = TableBody;
+  TableRow.allowedChildren       = [TableCell];
+  TableCell.requiredContainer    = TableRow;
+
+  Quill.register(TableContainer, true);
+  Quill.register(TableBody, true);
+  Quill.register(TableRow, true);
+  Quill.register(TableCell, true);
+})();
+
 const quill = new Quill('#quillEditor', {
   theme: 'snow',
   placeholder: 'Tulis isi surat / instruksi tambahan di sini...',
@@ -1138,18 +1171,21 @@ function tablePickerHandler() {
   }), 0);
 }
 function insertTable(rows, cols) {
-  const cellStyle = 'border:1px solid #ccc;padding:6px 10px;min-width:60px;';
-  let html = `<table style="border-collapse:collapse;width:100%;margin:8px 0;"><tbody>`;
+  let html = `<table style="border-collapse:collapse;width:100%;margin:10px 0;"><tbody>`;
   for (let r = 0; r < rows; r++) {
     html += '<tr>';
     for (let c = 0; c < cols; c++) {
-      html += `<td style="${cellStyle}">&nbsp;</td>`;
+      // Sel berisi spasi agar kursor bisa masuk & teks bisa diketik
+      html += `<td style="border:1px solid #999;padding:6px 10px;min-width:60px;vertical-align:top;"> </td>`;
     }
     html += '</tr>';
   }
   html += '</tbody></table><p><br></p>';
   const range = quill.getSelection(true);
-  quill.clipboard.dangerouslyPasteHTML(range ? range.index : quill.getLength(), html);
+  const index = range ? range.index : quill.getLength();
+  quill.clipboard.dangerouslyPasteHTML(index, html, 'user');
+  // Tempatkan kursor di sel pertama supaya langsung bisa mengetik
+  setTimeout(() => quill.setSelection(index, 0, 'silent'), 0);
 }
 
 // ── FORMAT NILAI KONTRAK ──
@@ -1813,12 +1849,10 @@ function validateRequired() {
     if (extList.length === 0)         errors.push('Penerima (pihak eksternal)');
     if (!hasIsi)                      errors.push('Isi surat');
   } else {
-    const kepada = document.getElementById('memo_kepada');
     const klas   = document.getElementById('memo_klasifikasi');
-    if (visible(kepada) && blank(kepada)) errors.push('Kepada');
     if (visible(klas)   && blank(klas))   errors.push('Klasifikasi');
     const tertuju = document.querySelectorAll('#tertujuTags .selected-tag').length;
-    if (!tertuju)                         errors.push('Tertuju (penerima internal)');
+    if (!tertuju)                         errors.push('Kepada (penerima internal)');
     if (!hasIsi)                          errors.push('Isi surat');
   }
   return errors;

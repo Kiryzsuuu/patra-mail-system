@@ -804,10 +804,14 @@ function addStampToPage(s) {
   const rl = { superadmin:'Super Admin', admin:'Admin', direktur:'Direktur', user:'Pengguna' };
   const jabatan = s.jabatanDisplay || (s.userRole ? (rl[s.userRole]||s.userRole) : (s.userOrg||''));
   const isMe    = s.userId?.toString() === CURRENT_USER_ID;
+  // Pembuat sesi boleh mengatur posisi stamp co-signer yang belum ditandatangani
+  const canDrag = isMe || IS_CREATOR;
   const div     = document.createElement('div');
   div.className = 'qr-stamp';
   div.id = `stamp-${s._id}`; div.dataset.id = s._id;
-  div.dataset.mine = isMe ? '1' : '0';
+  div.dataset.mine = canDrag ? '1' : '0';
+  // Tempatkan stamp baru pada halaman yang sedang dibuka
+  div.dataset.page = (s.position && s.position.page != null) ? s.position.page : currentPage;
   div.dataset.dm   = 'full'; div.dataset.showDate = '1';
   div.dataset.dateStr = new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
   div.dataset.lokasi  = ''; div.dataset.name = s.userName; div.dataset.role = jabatan;
@@ -819,11 +823,14 @@ function addStampToPage(s) {
     <div class="qr-stamp-sig"></div>
     <div class="qr-stamp-name">${s.userName}</div>
     <div class="qr-stamp-role">${jabatan}</div>
-    ${isMe ? '<div class="qr-resize"></div>' : ''}
+    ${canDrag ? '<div class="qr-resize"></div>' : ''}
     ${IS_CREATOR ? `<button class="qr-delete" onclick="removeSigner('${s._id}',event)" title="Hapus"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>` : ''}
   `;
   wrap.appendChild(div);
   initStamp(div);
+  // Simpan halaman penempatan & segarkan visibilitas agar tidak tampil di halaman lain
+  savePosition(div);
+  updateStampVisibility();
 }
 
 function addSignerToPanel(s, isMe) {

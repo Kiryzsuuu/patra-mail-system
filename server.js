@@ -3612,9 +3612,9 @@ app.get('/e-sign/:id/pdf', requireAuth, async (req, res) => {
     const ok = session.createdBy.toString() === req.user._id.toString() ||
       session.signers.some(s => s.userId.toString() === req.user._id.toString());
     if (!ok) return res.status(403).send('Forbidden');
-    const filePath = session.signedFile
-      ? path.join(__dirname, session.signedFile)
-      : path.join(__dirname, session.originalFile);
+    // Editor selalu memuat PDF ASLI (tanpa QR ter-burn). Stamp digambar sebagai overlay dari DB,
+    // sehingga tidak muncul tanda tangan ganda (file ber-QR hanya untuk download).
+    const filePath = path.join(__dirname, session.originalFile);
     if (!fs.existsSync(filePath)) return res.status(404).send('File tidak ditemukan');
     res.setHeader('Content-Type', 'application/pdf');
     res.sendFile(filePath);
