@@ -220,6 +220,8 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         <div class="qr-stamp" id="stamp-<%= s._id %>"
           data-id="<%= s._id %>"
           data-mine="<%= canDrag ? '1' : '0' %>"
+          data-owner="<%= s.userId %>"
+          data-signed="<%= s.status === 'signed' ? '1' : '0' %>"
           data-page="<%= stampPage %>"
           data-dm="<%= dm %>"
           data-show-date="<%= showDate ? '1' : '0' %>"
@@ -529,7 +531,20 @@ async function changePage(d) {
 let dragState = null;
 
 function initStamp(el) {
-  if (el.dataset.mine !== '1') return;
+  // Hitung ulang hak geser di sisi klien (lebih andal daripada mengandalkan atribut server)
+  const isSigned = el.dataset.signed === '1';
+  const isMine   = (el.dataset.owner || '') === CURRENT_USER_ID;
+  const canDrag  = !isSigned && (isMine || IS_CREATOR);
+  el.dataset.mine = canDrag ? '1' : '0';
+  // Stamp yang sudah ditandatangani jangan menutupi & memblokir stamp yang masih bisa digeser
+  if (isSigned) el.style.pointerEvents = 'none';
+  if (!canDrag) { el.style.cursor = 'default'; return; }
+  el.style.cursor = 'move';
+  el.style.touchAction = 'none';   // wajib agar pointer drag jalan di trackpad/layar sentuh
+  // Pastikan handle resize tersedia walau server tidak merendernya
+  if (!el.querySelector('.qr-resize')) {
+    const rdiv = document.createElement('div'); rdiv.className = 'qr-resize'; el.appendChild(rdiv);
+  }
   el.addEventListener('pointerdown', e => {
     if (e.target.classList.contains('qr-resize') || e.target.closest('.qr-delete')) return;
     e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('active');
@@ -810,6 +825,8 @@ function addStampToPage(s) {
   div.className = 'qr-stamp';
   div.id = `stamp-${s._id}`; div.dataset.id = s._id;
   div.dataset.mine = canDrag ? '1' : '0';
+  div.dataset.owner = s.userId || '';
+  div.dataset.signed = s.status === 'signed' ? '1' : '0';
   // Tempatkan stamp baru pada halaman yang sedang dibuka
   div.dataset.page = (s.position && s.position.page != null) ? s.position.page : currentPage;
   div.dataset.dm   = 'full'; div.dataset.showDate = '1';
