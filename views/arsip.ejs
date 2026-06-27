@@ -41,11 +41,22 @@
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Sumber / Asal Dokumen</label>
-        <input type="text" name="sumber" class="form-control" placeholder="Instansi atau pihak pengirim">
+        <select name="sumber" class="form-control form-select">
+          <option value="">— Pilih perusahaan kerjasama —</option>
+          <% perusahaanList.forEach(p => { const nm = (p.singkatan ? p.singkatan + ' — ' : '') + p.nama; %>
+          <option value="<%= nm %>"><%= nm %></option>
+          <% }) %>
+        </select>
       </div>
       <div>
-        <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Tertuju (Disposisi)</label>
-        <input type="text" name="tertuju" class="form-control" placeholder="cth: Direktur Utama">
+        <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">Tertuju (Direktur)</label>
+        <select name="tertujuUserId" class="form-control form-select">
+          <option value="">— Tidak dikirim ke direktur —</option>
+          <% direkturList.forEach(d => { %>
+          <option value="<%= d._id %>"><%= d.name %><%= d.jabatan ? ' (' + d.jabatan + ')' : '' %></option>
+          <% }) %>
+        </select>
+        <small style="font-size:11px;color:var(--gray-400);">Bila dipilih, arsip otomatis dikirim ke Kotak Masuk direktur.</small>
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;">File Lampiran <span style="color:var(--gray-400);font-weight:400;">(maks 10MB)</span></label>
@@ -158,8 +169,22 @@
     </div>
     <div style="margin-bottom:14px;"><label class="form-label">Judul / Perihal</label><input type="text" id="ea_judul" class="form-control"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
-      <div><label class="form-label">Sumber</label><input type="text" id="ea_sumber" class="form-control"></div>
-      <div><label class="form-label">Tertuju (Disposisi)</label><input type="text" id="ea_tertuju" class="form-control" placeholder="cth: Direktur Utama"></div>
+      <div><label class="form-label">Sumber / Asal Dokumen</label>
+        <select id="ea_sumber" class="form-control form-select">
+          <option value="">— Pilih perusahaan kerjasama —</option>
+          <% perusahaanList.forEach(p => { const nm = (p.singkatan ? p.singkatan + ' — ' : '') + p.nama; %>
+          <option value="<%= nm %>"><%= nm %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div><label class="form-label">Tertuju (Direktur)</label>
+        <select id="ea_tertujuUserId" class="form-control form-select">
+          <option value="">— Tidak dikirim ke direktur —</option>
+          <% direkturList.forEach(d => { %>
+          <option value="<%= d._id %>"><%= d.name %><%= d.jabatan ? ' (' + d.jabatan + ')' : '' %></option>
+          <% }) %>
+        </select>
+      </div>
       <div><label class="form-label">Tanggal</label><input type="date" id="ea_tanggal" class="form-control"></div>
     </div>
     <div style="margin-bottom:18px;"><label class="form-label">Keterangan</label><textarea id="ea_keterangan" class="form-control" rows="2"></textarea></div>
@@ -184,7 +209,7 @@ async function editArsip(id) {
   document.getElementById('ea_judul').value = d.judul || '';
   document.getElementById('ea_kategori').value = d.kategori || 'Umum';
   document.getElementById('ea_sumber').value = d.sumber || '';
-  document.getElementById('ea_tertuju').value = d.tertuju || '';
+  document.getElementById('ea_tertujuUserId').value = d.tertujuUserId || '';
   document.getElementById('ea_keterangan').value = d.keterangan || '';
   document.getElementById('ea_tanggal').value = d.tanggal ? new Date(d.tanggal).toISOString().slice(0,10) : '';
   document.getElementById('editArsipModal').style.display = 'block';
@@ -200,8 +225,8 @@ async function saveEditArsip() {
     nomorArsip: document.getElementById('ea_nomor').value,
     judul:      document.getElementById('ea_judul').value,
     kategori:   document.getElementById('ea_kategori').value,
-    sumber:     document.getElementById('ea_sumber').value,
-    tertuju:    document.getElementById('ea_tertuju').value,
+    sumber:       document.getElementById('ea_sumber').value,
+    tertujuUserId: document.getElementById('ea_tertujuUserId').value,
     keterangan: document.getElementById('ea_keterangan').value,
     tanggal:    document.getElementById('ea_tanggal').value,
   });

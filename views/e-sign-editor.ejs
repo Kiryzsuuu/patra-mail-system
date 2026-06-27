@@ -209,7 +209,9 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
           const dateStr  = new Date(tglDate).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
           const fullDate = lokasi ? lokasi+', '+dateStr : dateStr;
           const isMe = s.userId.toString() === currentUser._id.toString();
-          const canDrag = isMe && s.status !== 'signed';
+          // Creator boleh mengatur posisi semua stamp yang belum ditandatangani (termasuk co-signer)
+          const canDrag = (isMe || isCreator) && s.status !== 'signed';
+          const stampPage = (s.position && s.position.page) || 0;
         %>
         <%
           const displayDateStr = s.tanggalDisplay || dateStr;
@@ -218,6 +220,7 @@ body { font-family: 'DM Sans', sans-serif; background: #0f172a; color: #1e293b; 
         <div class="qr-stamp" id="stamp-<%= s._id %>"
           data-id="<%= s._id %>"
           data-mine="<%= canDrag ? '1' : '0' %>"
+          data-page="<%= stampPage %>"
           data-dm="<%= dm %>"
           data-show-date="<%= showDate ? '1' : '0' %>"
           data-date-str="<%= displayDateStr %>"
@@ -505,6 +508,15 @@ async function renderPage(n) {
   renderTask = null;
   currentPage = n;
   document.getElementById('pageNumDisp').textContent = n + 1;
+  updateStampVisibility();
+}
+
+// Tampilkan hanya stamp milik halaman aktif
+function updateStampVisibility() {
+  document.querySelectorAll('.qr-stamp').forEach(el => {
+    const p = parseInt(el.dataset.page) || 0;
+    el.style.display = (p === currentPage) ? '' : 'none';
+  });
 }
 
 async function changePage(d) {
@@ -565,6 +577,8 @@ document.querySelectorAll('.qr-stamp').forEach(el => {
 });
 
 async function savePosition(el) {
+  // Stamp mengikuti halaman tempat ia diletakkan
+  el.dataset.page = currentPage;
   await fetch(`/e-sign/${SESSION_ID}/update-position`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ signerId:el.dataset.id, page:currentPage,

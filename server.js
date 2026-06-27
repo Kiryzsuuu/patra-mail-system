@@ -1022,6 +1022,29 @@ app.get('/compose', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Manajemen Dokumen — Hapus surat (pemilik / admin)
+app.post('/compose/:id/delete', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const email = await Email.findById(req.params.id);
+    if (!email) return res.json({ ok: false, message: 'Surat tidak ditemukan.' });
+    // Hanya pembuat / pemilik (atau superadmin) yang boleh menghapus
+    const isOwner = String(email.from?.userId) === String(userId) || String(email.ownerUserId) === String(userId);
+    if (!isOwner && req.user.role !== 'superadmin') {
+      return res.json({ ok: false, message: 'Anda tidak berhak menghapus surat ini.' });
+    }
+    await Email.deleteOne({ _id: email._id });
+    await log(req, 'email_deleted', 'email',
+      `${req.user.name} menghapus surat No. ${email.nomorSurat || '-'} — "${email.subject}"`,
+      { emailId: email._id, nomorSurat: email.nomorSurat, subject: email.subject }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.json({ ok: false, message: 'Terjadi kesalahan saat menghapus.' });
+  }
+});
+
 // Roster Dokumen — dokumen bertanda tangan, dikelompokkan per jenis
 app.get('/roster-dokumen', requireAuth, async (req, res) => {
   try {
@@ -2999,31 +3022,68 @@ app.get('/arsip', requireAuth, requireDirektur, async (req, res) => {
     ];
     const list  = await Arsip.find(filter).sort({ tanggal: -1 }).limit(200).lean();
     const total = await Arsip.countDocuments();
+    // Daftar perusahaan kerjasama (untuk pilihan Sumber) & direktur (untuk Tertuju + auto-kirim)
+    const [perusahaanList, direkturList] = await Promise.all([
+      Perusahaan.find({ isActive: true }).sort({ nama: 1 }).select('nama singkatan').lean(),
+      User.find({ role: 'direktur' }).sort({ name: 1 }).select('name email jabatan').lean(),
+    ]);
     res.render('arsip', {
       active: 'arsip', title: 'Dokumen Arsip',
       list, total, q: q||'', kategori: kategori||'',
-      ARSIP_KATEGORI, formatDate, ...counts
+      ARSIP_KATEGORI, perusahaanList, direkturList, formatDate, ...counts
     });
   } catch (err) { console.error(err); res.redirect('/inbox'); }
 });
 
 app.post('/arsip', requireAuth, requireDirektur, arsipUpload.single('lampiran'), async (req, res) => {
   try {
-    const { nomorArsip, judul, kategori, tanggal, keterangan, sumber, tertuju } = req.body;
+    const { nomorArsip, judul, kategori, tanggal, keterangan, sumber, tertuju, tertujuUserId } = req.body;
     if (!judul || !tanggal) return res.redirect('/arsip?error=1');
-    await Arsip.create({
+
+    // Resolve direktur tujuan (untuk auto-kirim)
+    let direktur = null;
+    if (tertujuUserId) direktur = await User.findById(tertujuUserId).lean().catch(() => null);
+
+    const lampiranPath = req.file ? '/uploads/arsip/' + req.file.filename : '';
+    const arsip = await Arsip.create({
       nomorArsip: nomorArsip?.trim() || '',
       judul: judul.trim(),
       kategori: kategori || 'Umum',
       tanggal: new Date(tanggal),
       keterangan: keterangan?.trim() || '',
       sumber: sumber?.trim() || '',
-      tertuju: tertuju?.trim() || '',
-      lampiran: req.file ? '/uploads/arsip/' + req.file.filename : '',
+      tertuju: direktur ? direktur.name : (tertuju?.trim() || ''),
+      tertujuUserId: direktur ? direktur._id : null,
+      lampiran: lampiranPath,
       lampiranNama: req.file ? req.file.originalname : '',
       createdBy: { userId: req.user._id, name: req.user.name, email: req.user.email },
     });
     await log(req, 'arsip_create', 'arsip', `Arsip "${judul}" ditambahkan oleh ${req.user.name}`);
+
+    // Auto-kirim ke Direktur yang dituju agar langsung bisa dibaca di Kotak Masuk
+    if (direktur) {
+      const bodyHtml = `<p>Dokumen arsip berikut ditujukan kepada Anda:</p>`
+        + `<p><strong>Judul:</strong> ${judul.trim()}<br>`
+        + (nomorArsip?.trim() ? `<strong>Nomor Arsip:</strong> ${nomorArsip.trim()}<br>` : '')
+        + `<strong>Kategori:</strong> ${kategori || 'Umum'}<br>`
+        + (sumber?.trim() ? `<strong>Sumber / Asal:</strong> ${sumber.trim()}<br>` : '')
+        + (keterangan?.trim() ? `<strong>Keterangan:</strong> ${keterangan.trim()}` : '')
+        + `</p>`;
+      await Email.create({
+        from:    { userId: req.user._id, name: req.user.name, email: req.user.email },
+        to:      [{ userId: direktur._id, name: direktur.name, email: direktur.email }],
+        subject: `[Arsip] ${judul.trim()}`,
+        body:    bodyHtml,
+        tag:     'Biasa',
+        nomorSurat: nomorArsip?.trim() || '',
+        tipeSurat: 'Arsip',
+        jenis:   'internal',
+        status:  'sent',
+        lampiran:     lampiranPath,
+        lampiranNama: req.file ? req.file.originalname : '',
+      });
+      await log(req, 'arsip_dispatch', 'arsip', `Arsip "${judul}" otomatis dikirim ke Direktur ${direktur.name}`);
+    }
     res.redirect('/arsip');
   } catch (err) { console.error(err); res.redirect('/arsip'); }
 });
@@ -3040,13 +3100,16 @@ app.get('/arsip/:id/json', requireAuth, requireDirektur, async (req, res) => {
 // Edit arsip (termasuk tambah tertuju/disposisi)
 app.put('/arsip/:id', requireAuth, requireDirektur, async (req, res) => {
   try {
-    const { nomorArsip, judul, kategori, tanggal, keterangan, sumber, tertuju } = req.body;
+    const { nomorArsip, judul, kategori, tanggal, keterangan, sumber, tertuju, tertujuUserId } = req.body;
+    let direktur = null;
+    if (tertujuUserId) direktur = await User.findById(tertujuUserId).lean().catch(() => null);
     const update = {
       nomorArsip: nomorArsip?.trim() || '',
       kategori: kategori || 'Umum',
       keterangan: keterangan?.trim() || '',
       sumber: sumber?.trim() || '',
-      tertuju: tertuju?.trim() || '',
+      tertuju: direktur ? direktur.name : (tertuju?.trim() || ''),
+      tertujuUserId: direktur ? direktur._id : null,
     };
     if (judul?.trim()) update.judul = judul.trim();
     if (tanggal) update.tanggal = new Date(tanggal);
@@ -3698,7 +3761,12 @@ app.post('/e-sign/:id/update-position', requireAuth, async (req, res) => {
     const { signerId, page, x, y, width, height } = req.body;
     const signer = session.signers.id(signerId);
     if (!signer) return res.json({ ok: false });
-    if (signer.userId.toString() !== req.user._id.toString()) return res.json({ ok: false });
+    // Signer sendiri ATAU pembuat sesi boleh mengatur posisi (termasuk stamp co-signer)
+    const isSelf    = signer.userId.toString() === req.user._id.toString();
+    const isCreator = session.createdBy.toString() === req.user._id.toString();
+    if (!isSelf && !isCreator) return res.json({ ok: false });
+    // Stamp yang sudah ditandatangani tidak boleh dipindah
+    if (signer.status === 'signed') return res.json({ ok: false });
     signer.position = {
       page:   parseInt(page)   || 0,
       x:      parseFloat(x)    || 0,

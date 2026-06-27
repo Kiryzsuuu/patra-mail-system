@@ -8,6 +8,7 @@ const arsipSchema = new mongoose.Schema({
   keterangan:  { type: String, default: '' },
   sumber:      { type: String, default: '' },
   tertuju:     { type: String, default: '' },
+  tertujuUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   lampiran:    { type: String, default: '' },
   lampiranNama:{ type: String, default: '' },
   createdBy:   {
