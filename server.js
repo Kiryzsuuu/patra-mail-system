@@ -2982,12 +2982,72 @@ app.delete('/nomor-saja/:id', requireAuth, requireDirektur, async (req, res) => 
       deletedAt: new Date(),
       deletedBy: { userId: req.user._id, name: req.user.name },
     });
+    // Jika nomor yang dihapus adalah nomor TERAKHIR yang di-generate untuk tipe+tahun ini,
+    // kembalikan counter agar nomor berikutnya tidak loncat.
+    try {
+      const seqParsed = parseInt((doc.nomorSurat || '').split('/')[0]);
+      if (!isNaN(seqParsed)) {
+        const year = new Date(doc.tanggal).getFullYear();
+        const cKey = `${getTipeCounterKey(doc.tipeSurat)}-${year}`;
+        const counter = await DocCounter.findOne({ key: cKey });
+        if (counter && counter.seq === seqParsed) {
+          await DocCounter.findOneAndUpdate({ key: cKey }, { $inc: { seq: -1 } });
+        }
+      }
+    } catch (_) {}
     await log(req, 'nomor_delete', 'surat',
       `Nomor ${doc.nomorSurat} dihapus oleh ${req.user.name}`,
       { nomorSurat: doc.nomorSurat, tipeSurat: doc.tipeSurat }
     );
     res.json({ ok: true });
   } catch { res.json({ ok: false }); }
+});
+
+// Edit nomor surat (perihal, tanggal, jenis)
+app.put('/nomor-saja/:id', requireAuth, requireDirektur, async (req, res) => {
+  try {
+    const doc = await NomorSaja.findById(req.params.id);
+    if (!doc || doc.isDeleted) return res.json({ ok: false, message: 'Data tidak ditemukan.' });
+    const { perihal, tanggal, jenis } = req.body;
+    const update = {};
+    if (perihal !== undefined) update.perihal = perihal.trim() || '(Tanpa Perihal)';
+    if (tanggal) update.tanggal = new Date(tanggal);
+    if (jenis)   update.jenis  = jenis;
+    await NomorSaja.findByIdAndUpdate(doc._id, { $set: update });
+    await log(req, 'nomor_edit', 'surat', `Nomor ${doc.nomorSurat} diedit oleh ${req.user.name}`, { nomorSurat: doc.nomorSurat });
+    res.json({ ok: true });
+  } catch { res.json({ ok: false }); }
+});
+
+// ── RESET DATA (superadmin only) ──
+app.post('/admin/reset/nomor-saja', requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const ALL_KEYS = Object.values(TIPE_COUNTER_KEY || {});
+    await NomorSaja.deleteMany({});
+    // Reset semua counter nomor-saja
+    const year = new Date().getFullYear();
+    const keyPattern = new RegExp(`^(${[...new Set(ALL_KEYS)].join('|')})-`);
+    await DocCounter.deleteMany({ key: keyPattern });
+    await log(req, 'reset_nomor_saja', 'system', `Superadmin ${req.user.name} mereset semua data Generate Nomor Surat`);
+    res.json({ ok: true, message: 'Semua data Generate Nomor Surat berhasil dihapus.' });
+  } catch (err) { console.error(err); res.json({ ok: false, message: 'Gagal reset.' }); }
+});
+
+app.post('/admin/reset/persuratan', requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    await Promise.all([
+      Email.deleteMany({}),
+      DocumentSignature.deleteMany({}),
+      ESignSession.deleteMany({}),
+      Arsip.deleteMany({}),
+      SuratMasuk.deleteMany({}),
+      PersonalDocument.deleteMany({}),
+    ]);
+    // Reset counter nomor surat (internal generate dari compose)
+    await DocCounter.deleteMany({});
+    await log(req, 'reset_persuratan', 'system', `Superadmin ${req.user.name} mereset semua data persuratan`);
+    res.json({ ok: true, message: 'Semua data persuratan berhasil dihapus.' });
+  } catch (err) { console.error(err); res.json({ ok: false, message: 'Gagal reset.' }); }
 });
 
 // ── DOKUMEN ARSIP ──

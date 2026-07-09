@@ -28,6 +28,68 @@
   </div>
 </div>
 
+<!-- Modal Edit Nomor Surat -->
+<div id="modalEdit" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:440px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <div style="width:40px;height:40px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M14 2l4 4-9 9H5v-4L14 2z" stroke="#1d4ed8" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--gray-900);">Edit Nomor Surat</div>
+        <div id="editNomorLabel" style="font-family:monospace;font-size:12px;color:var(--brand-700);margin-top:2px;"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Perihal</label>
+      <input id="editPerihal" type="text" class="form-control" placeholder="Perihal surat..." maxlength="200">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Tanggal Surat</label>
+        <input id="editTanggal" type="date" class="form-control">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Jenis</label>
+        <select id="editJenis" class="form-control form-select">
+          <option value="internal">Internal</option>
+          <option value="eksternal">Eksternal</option>
+        </select>
+      </div>
+    </div>
+    <div id="editError" style="display:none;font-size:12px;color:#ef4444;margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="tutupModalEdit()" class="btn btn-secondary" style="font-size:13px;">Batal</button>
+      <button onclick="simpanEdit()" class="btn btn-primary" style="font-size:13px;">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reset Semua Nomor -->
+<% if (user.role === 'superadmin') { %>
+<div id="modalReset" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:440px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div style="width:40px;height:40px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 6h14M8 6V4h4v2M5 6v11a1 1 0 001 1h8a1 1 0 001-1V6H5z" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--gray-900);">Reset Semua Data Nomor Surat</div>
+        <div style="font-size:12px;color:#ef4444;margin-top:2px;">Semua nomor dan counter akan dihapus permanen</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--gray-600);margin-bottom:14px;">Tindakan ini akan menghapus <strong>seluruh</strong> data nomor surat dan mereset counter sehingga penomoran mulai dari <strong>001</strong> kembali. Tidak dapat dibatalkan.</p>
+    <p style="font-size:13px;color:var(--gray-600);margin-bottom:6px;">Ketik <strong>RESET</strong> untuk konfirmasi:</p>
+    <input id="resetKonfirmasi" type="text" class="form-control" placeholder="Ketik RESET..." autocomplete="off"
+           style="margin-bottom:16px;font-size:13px;" oninput="checkReset()">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="document.getElementById('modalReset').style.display='none'" class="btn btn-secondary" style="font-size:13px;">Batal</button>
+      <button id="btnResetOk" onclick="konfirmasiReset()" class="btn" style="background:#ef4444;color:#fff;font-size:13px;opacity:.5;cursor:not-allowed;" disabled>Hapus Semua</button>
+    </div>
+  </div>
+</div>
+<% } %>
+
 <!-- Toast -->
 <div id="toastMsg" style="display:none;position:fixed;bottom:24px;right:24px;z-index:9998;background:#1e293b;color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.2);max-width:320px;"></div>
 
@@ -94,7 +156,15 @@
   <div>
     <div style="background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-md);">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--gray-100);">
+        <div style="display:flex;align-items:center;gap:12px;">
         <span style="font-size:13px;font-weight:600;color:var(--gray-700);"><%= list.length %> nomor di-generate</span>
+        <% if (user.role === 'superadmin') { %>
+        <button onclick="document.getElementById('modalReset').style.display='flex'"
+          style="font-size:12px;padding:4px 10px;border-radius:5px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;cursor:pointer;font-weight:600;">
+          ⚠ Reset Semua
+        </button>
+        <% } %>
+      </div>
         <form method="GET" action="/nomor-saja" style="display:flex;gap:8px;">
           <input type="text" name="q" value="<%= q %>" class="form-control" style="width:200px;padding:6px 12px;font-size:13px;" placeholder="Cari nomor / perihal...">
           <select name="tipe" class="form-control form-select" style="width:140px;padding:6px;font-size:13px;" onchange="this.form.submit()">
@@ -120,7 +190,7 @@
               <th style="padding:10px 14px;text-align:left;color:var(--gray-600);font-weight:600;">Jenis</th>
               <th style="padding:10px 14px;text-align:left;color:var(--gray-600);font-weight:600;">Perihal</th>
               <th style="padding:10px 14px;text-align:left;color:var(--gray-600);font-weight:600;">Tanggal</th>
-              <th style="padding:10px 14px;text-align:center;color:var(--gray-600);font-weight:600;width:60px;">Aksi</th>
+              <th style="padding:10px 14px;text-align:center;color:var(--gray-600);font-weight:600;width:80px;">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -141,11 +211,18 @@
             <td style="padding:10px 14px;color:var(--gray-500);white-space:nowrap;"><%= formatDate(d.tanggal) %></td>
             <td style="padding:10px 14px;text-align:center;">
               <% if(!d.isDeleted && ['direktur','admin','superadmin'].includes(user.role)){ %>
-              <button onclick="bukaBukaModal('<%= d._id %>','<%= d.nomorSurat.replace(/'/g, '') %>')"
-                      style="background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;border-radius:4px;transition:color .15s;"
-                      title="Hapus" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--gray-400)'">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4h4v2M7 6v10h6V6H7z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
+              <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
+                <button onclick="bukaEdit('<%= d._id %>','<%= d.nomorSurat.replace(/'/g,'') %>','<%= (d.perihal||'').replace(/'/g,'').replace(/"/g,'') %>','<%= d.tanggal ? new Date(d.tanggal).toISOString().slice(0,10) : '' %>','<%= d.jenis||'internal' %>')"
+                        style="background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;border-radius:4px;transition:color .15s;"
+                        title="Edit" onmouseover="this.style.color='#1d4ed8'" onmouseout="this.style.color='var(--gray-400)'">
+                  <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M14 2l4 4-9 9H5v-4L14 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                </button>
+                <button onclick="bukaBukaModal('<%= d._id %>','<%= d.nomorSurat.replace(/'/g, '') %>')"
+                        style="background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;border-radius:4px;transition:color .15s;"
+                        title="Hapus" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--gray-400)'">
+                  <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4h4v2M7 6v10h6V6H7z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
               <% } else { %>—<% } %>
             </td>
           </tr>
@@ -159,37 +236,30 @@
 </div>
 
 <script>
-let _hapusId = '', _hapusNomor = '';
+let _hapusId = '', _hapusNomor = '', _editId = '';
 
+// ── HAPUS ──
 function bukaBukaModal(id, nomor) {
-  _hapusId = id;
-  _hapusNomor = nomor;
+  _hapusId = id; _hapusNomor = nomor;
   document.getElementById('modalNomorLabel').textContent = nomor;
   document.getElementById('modalKonfirmasi').value = '';
   document.getElementById('modalError').style.display = 'none';
   checkKonfirmasi();
-  const m = document.getElementById('modalHapus');
-  m.style.display = 'flex';
+  document.getElementById('modalHapus').style.display = 'flex';
   setTimeout(() => document.getElementById('modalKonfirmasi').focus(), 50);
 }
-function tutupModal() {
-  document.getElementById('modalHapus').style.display = 'none';
-}
+function tutupModal() { document.getElementById('modalHapus').style.display = 'none'; }
 function checkKonfirmasi() {
   const val = document.getElementById('modalKonfirmasi').value.trim();
   const btn = document.getElementById('btnHapusOk');
   const match = val === _hapusNomor;
-  btn.disabled = !match;
-  btn.style.opacity = match ? '1' : '.5';
-  btn.style.cursor  = match ? 'pointer' : 'not-allowed';
+  btn.disabled = !match; btn.style.opacity = match ? '1' : '.5'; btn.style.cursor = match ? 'pointer' : 'not-allowed';
 }
 async function konfirmasiHapus() {
   const konfirmasi = document.getElementById('modalKonfirmasi').value.trim();
-  const errEl = document.getElementById('modalError');
-  errEl.style.display = 'none';
+  document.getElementById('modalError').style.display = 'none';
   const r = await fetch('/nomor-saja/' + _hapusId, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'DELETE', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ konfirmasi })
   });
   const j = await r.json();
@@ -207,19 +277,71 @@ async function konfirmasiHapus() {
     showToast(j.message || 'Gagal menghapus.', false);
   }
 }
+
+// ── EDIT ──
+function bukaEdit(id, nomor, perihal, tanggal, jenis) {
+  _editId = id;
+  document.getElementById('editNomorLabel').textContent = nomor;
+  document.getElementById('editPerihal').value = perihal;
+  document.getElementById('editTanggal').value = tanggal;
+  document.getElementById('editJenis').value   = jenis;
+  document.getElementById('editError').style.display = 'none';
+  document.getElementById('modalEdit').style.display = 'flex';
+  setTimeout(() => document.getElementById('editPerihal').focus(), 50);
+}
+function tutupModalEdit() { document.getElementById('modalEdit').style.display = 'none'; }
+async function simpanEdit() {
+  const perihal = document.getElementById('editPerihal').value.trim();
+  const tanggal = document.getElementById('editTanggal').value;
+  const jenis   = document.getElementById('editJenis').value;
+  const r = await fetch('/nomor-saja/' + _editId, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ perihal, tanggal, jenis })
+  });
+  const j = await r.json();
+  if (j.ok) {
+    tutupModalEdit();
+    showToast('Nomor surat berhasil diperbarui.', true);
+    setTimeout(() => location.reload(), 1000);
+  } else {
+    document.getElementById('editError').textContent = j.message || 'Gagal menyimpan.';
+    document.getElementById('editError').style.display = 'block';
+  }
+}
+
+// ── RESET SEMUA ──
+function checkReset() {
+  const val = document.getElementById('resetKonfirmasi')?.value.trim();
+  const btn = document.getElementById('btnResetOk');
+  if (!btn) return;
+  const ok = val === 'RESET';
+  btn.disabled = !ok; btn.style.opacity = ok ? '1' : '.5'; btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+}
+async function konfirmasiReset() {
+  const btn = document.getElementById('btnResetOk');
+  btn.disabled = true; btn.textContent = 'Menghapus...';
+  const r = await fetch('/admin/reset/nomor-saja', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+  const j = await r.json();
+  document.getElementById('modalReset').style.display = 'none';
+  if (j.ok) { showToast(j.message, true); setTimeout(() => location.reload(), 1200); }
+  else { showToast(j.message || 'Gagal reset.', false); btn.disabled = false; btn.textContent = 'Hapus Semua'; }
+}
+
 function showToast(msg, ok) {
   const t = document.getElementById('toastMsg');
-  t.textContent = msg;
-  t.style.background = ok ? '#1e293b' : '#ef4444';
-  t.style.display = 'block';
+  t.textContent = msg; t.style.background = ok ? '#1e293b' : '#ef4444'; t.style.display = 'block';
   setTimeout(() => { t.style.display = 'none'; }, 3500);
 }
-document.getElementById('modalHapus').addEventListener('click', function(e) {
-  if (e.target === this) tutupModal();
-});
+
+document.getElementById('modalHapus').addEventListener('click', function(e) { if (e.target === this) tutupModal(); });
+document.getElementById('modalEdit').addEventListener('click', function(e) { if (e.target === this) tutupModalEdit(); });
 document.getElementById('modalKonfirmasi').addEventListener('keydown', function(e) {
   if (e.key === 'Enter' && !document.getElementById('btnHapusOk').disabled) konfirmasiHapus();
   if (e.key === 'Escape') tutupModal();
+});
+document.getElementById('editPerihal').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') simpanEdit();
+  if (e.key === 'Escape') tutupModalEdit();
 });
 </script>
 

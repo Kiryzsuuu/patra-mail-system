@@ -379,6 +379,20 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Danger Zone -->
+    <div style="margin-top:28px;padding:20px 24px;border:1.5px dashed #fca5a5;border-radius:10px;background:#fff5f5;">
+      <div style="font-size:13px;font-weight:700;color:#b91c1c;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M10 2l8.66 15H1.34L10 2z" stroke="#b91c1c" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8v4M10 14v.5" stroke="#b91c1c" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Danger Zone – Reset Data
+      </div>
+      <p style="font-size:12.5px;color:#7f1d1d;margin-bottom:14px;line-height:1.7;">
+        Menghapus semua data persuratan (Email, Arsip, Surat Masuk, E-Sign, Dokumen Pribadi) dan mereset counter penomoran. Tidak dapat dibatalkan.
+      </p>
+      <button onclick="resetPersuratan()" style="padding:8px 16px;border-radius:7px;border:1.5px solid #fca5a5;background:#fff;color:#b91c1c;font-size:13px;font-weight:600;cursor:pointer;">
+        ⚠ Reset Semua Data Persuratan
+      </button>
+    </div>
   </div>
 </div>
 
@@ -924,6 +938,20 @@ async function deleteCounter(key) {
       document.getElementById(rowId)?.remove();
       showToast(`Counter "${key}" dihapus.`, true);
     } else showToast('Gagal menghapus.', false);
+  } catch(e) { showToast('Terjadi kesalahan.', false); }
+}
+
+async function resetPersuratan() {
+  const ok = await showConfirm(
+    'Hapus <strong>SEMUA</strong> data persuratan? Ini meliputi seluruh Email, Arsip, Surat Masuk, E-Sign, Dokumen Pribadi, dan reset counter penomoran. Tidak dapat dibatalkan.',
+    { title: 'Reset Data Persuratan', type: 'danger', confirmLabel: 'Hapus Semua' }
+  );
+  if (!ok) return;
+  try {
+    const res  = await fetch('/admin/reset/persuratan', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await res.json();
+    if (data.ok) { showToast(data.message, true); setTimeout(() => location.reload(), 1500); }
+    else showToast(data.message || 'Gagal reset.', false);
   } catch(e) { showToast('Terjadi kesalahan.', false); }
 }
 </script>
